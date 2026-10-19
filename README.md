@@ -70,3 +70,34 @@ Before handling real school funds, get school approval, verify student identitie
 The wallet uses prepaid credit that staff record only after verifying that funds were received through the school's approved process. It does not take card/e-wallet payments and is not a bank or regulated e-money wallet. Order totals are deducted immediately; staff can cancel and refund a paid order only while its status is still `New`.
 
 Local JSON storage is intended for one server process. For a shared deployment, configure a properly managed PostgreSQL database with `DATABASE_URL`.
+
+## ESP32 RFID and microSD prototype
+
+The sketch at `Arduino/sketch_sep2a/sketch_sep2a.ino` is for a common ESP32 DevKit board, an MFRC522/RC522 13.56 MHz RFID reader, and an SPI microSD module. It connects to Wi-Fi if configured, prints the ESP32's local IP, reads card UIDs, and appends them to `/rfid_scans.csv` on the SD card. It does **not** connect scans to student accounts, contact the cafeteria server, charge campus credit, or confirm order pickup. Treat card UIDs and the SD log as sensitive identifiers.
+
+### Arduino IDE setup
+
+1. Install the Arduino IDE and add the ESP32 board support package using **Boards Manager** (search for **esp32 by Espressif Systems**).
+2. In **Library Manager**, install **MFRC522 by GithubCommunity** (the miguelbalboa MFRC522 library).
+3. In the Arduino IDE, open `Arduino/sketch_sep2a/sketch_sep2a.ino` and select your exact ESP32 board under **Tools → Board**.
+4. Edit `wifiName` and `wifiPassword` near the top of the sketch for the router the ESP32 will use. Keep real Wi-Fi credentials out of GitHub; if you switch computers or networks, enter that network's details locally.
+5. Format the microSD card as FAT32, disconnect power before wiring, then connect the modules according to the pin map below. Use jumper leads and a shared ground.
+6. Connect the ESP32 over USB, choose the correct serial port, and click **Upload**. Open **Tools → Serial Monitor** at **115200 baud** to see whether Wi-Fi, the SD module, and the RC522 initialized.
+7. Tap a compatible card/key fob. Its UID and ESP32 uptime are printed in Serial Monitor and appended to `rfid_scans.csv`. The uptime is milliseconds since boot, not a real date/time.
+
+### Example SPI wiring (common ESP32 DevKit + RC522 + microSD SPI breakout)
+
+| ESP32 pin | RC522 pin | microSD module pin |
+| --- | --- | --- |
+| GPIO 18 | SCK | SCK / CLK |
+| GPIO 19 | MISO | MISO / DO |
+| GPIO 23 | MOSI | MOSI / DI |
+| GPIO 21 | SDA / SS / CS | — |
+| GPIO 22 | RST | — |
+| GPIO 27 | — | CS |
+| 3V3 | 3.3V power | 3.3V-compatible module power, per its documentation |
+| GND | GND | GND |
+
+The two modules share SPI clock/data, but each has its **own chip-select wire**. This example pinout is not universal: confirm the labels and voltage requirements for your exact ESP32, RFID reader, and SD breakout before connecting power. The RC522 uses 3.3 V logic; never feed 5 V signals into ESP32 or RC522 pins. Some SD breakouts include a regulator or level shifting and have different power input requirements. Do not connect a module's 5 V output to the ESP32's 3.3 V rail.
+
+The ESP32 and server computer can join the same router for local-network use; internet is not necessary for this scan logger. The current sketch only prints the ESP32's IP address and saves scans to SD. Do not treat an RFID UID as secure authentication or payment: common card UIDs can be copied, and this prototype does not tell the server who tapped or change an order's status. The earlier sketch contained Wi-Fi credentials; rotate that Wi-Fi password if that version was shared or committed, then use local, uncommitted settings for the new one.
