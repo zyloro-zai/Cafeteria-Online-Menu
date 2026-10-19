@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f7fb" />
+  <title>Cafeteria Staff Portal</title>
+  <style>
+    :root {
+      --ink: #1c2f49;
+      --muted: #75849a;
+      --blue: #244d83;
+      --blue-dark: #193b69;
+      --blue-pale: #edf4fc;
+      --line: #e4eaf1;
+      --green: #279466;
+      --green-pale: #e4f6ec;
+      --yellow: #a97713;
+      --yellow-pale: #fff4d5;
+      --red: #b44d46;
+      --red-pale: #ffebe9;
+      --canvas: #f3f6fa;
+      --shadow: 0 12px 34px rgba(28, 54, 88, .09);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .phone {
+      width: min(100%, 480px);
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #fbfcfe;
+      box-shadow: 0 0 48px rgba(27, 52, 85, .08);
+      overflow: hidden;
+    }
+    .topbar {
+      min-height: 70px;
+      padding: 13px 19px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.96);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: white;
+      background: var(--blue);
+      font-size: 21px;
+    }
+    .brand-name { font-size: 15px; font-weight: 800; letter-spacing: -.025em; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .student-link {
+      flex: 0 0 auto;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .main { padding: 22px 18px 36px; }
+    .screen { display: none; animation: appear .2s ease-out; }
+    .screen.active { display: block; }
+    @keyframes appear { from { opacity: .55; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .screen-title { margin: 0 0 7px; font-size: 27px; line-height: 1.16; letter-spacing: -.045em; }
+    .intro { margin: 0 0 23px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .hero {
+      min-height: 190px;
+      padding: 22px;
+      margin-bottom: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      border-radius: 23px;
+      color: white;
+      background: radial-gradient(circle at 82% 24%, rgba(255,255,255,.2) 0 15%, transparent 16%),
+        linear-gradient(145deg, #3669a1 0%, #1d426f 65%, #18395f 100%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .hero::before {
+      content: "🧑‍🍳";
+      position: absolute;
+      right: 23px;
+      top: 21px;
+      font-size: 64px;
+      filter: drop-shadow(0 7px 12px rgba(0,0,0,.17));
+    }
+    .hero strong { max-width: 225px; font-size: 22px; line-height: 1.17; }
+    .hero span { margin-top: 8px; color: rgba(255,255,255,.78); font-size: 12px; }
+    .field-label { display: block; margin: 15px 0 7px; font-size: 12px; font-weight: 700; }
+    .field {
+      width: 100%;
+      min-height: 49px;
+      padding: 0 14px;
+      border: 1px solid #dbe3ed;
+      border-radius: 12px;
+      color: var(--ink);
+      background: white;
+      outline: 0;
+      font-size: 14px;
+    }
+    .field:focus { border-color: #7396bf; box-shadow: 0 0 0 3px rgba(55, 103, 158, .12); }
+    .password-wrap { position: relative; }
+    .password-wrap .field { padding-right: 72px; }
+    .show-password {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 49px;
+      padding: 0 13px;
+      border: 0;
+      color: var(--blue);
+      background: transparent;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .helper { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .primary, .secondary {
+      width: 100%;
+      min-height: 49px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 13px;
+      font-size: 14px;
+      font-weight: 800;
+      transition: transform .15s ease, filter .15s ease;
+    }
+    .primary { color: white; background: var(--blue); box-shadow: 0 6px 13px rgba(36,77,131,.18); }
+    .primary:hover { background: var(--blue-dark); }
+    .secondary { color: var(--blue); background: var(--blue-pale); border: 1px solid #e0eaf5; }
+    .primary:active, .secondary:active { transform: scale(.985); }
+    .login-actions { margin-top: 21px; }
+    .privacy-note {
+      margin-top: 19px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f3f7fb;
+      color: #718096;
+      font-size: 11px;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .dashboard-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .dashboard-head .eyebrow { margin-bottom: 3px; }
+    .dashboard-head h1 { margin: 0; font-size: 23px; letter-spacing: -.04em; }
+    .header-actions { display: flex; gap: 7px; }
+    .icon-button {
+      min-height: 37px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--blue);
+      background: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .demo-banner {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 11px;
+      color: #657994;
+      background: #eef3f9;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .wallet-panel {
+      padding: 15px;
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: white;
+      box-shadow: 0 5px 18px rgba(32, 58, 92, .04);
+    }
+    .wallet-panel > h2 { margin: 0 0 6px; font-size: 16px; }
+    .wallet-help { margin: 0 0 15px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .wallet-panel form { padding: 12px 0; border-top: 1px solid #eef1f5; }
+    .wallet-panel form h3, .wallet-ledger h3 { margin: 0; font-size: 13px; }
+    .wallet-submit { min-height: 43px; margin-top: 13px; font-size: 12px; }
+    .wallet-ledger { padding-top: 14px; border-top: 1px solid #eef1f5; }
+    .wallet-ledger .section-heading { margin-bottom: 9px; }
+    .wallet-transactions { display: grid; gap: 7px; }
+    .staff-settings { padding-top: 13px; margin-top: 13px; border-top: 1px solid #eef1f5; }
+    .staff-settings summary { color: var(--blue); font-size: 12px; font-weight: 800; cursor: pointer; }
+    .wallet-transaction {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      background: #f5f7fa;
+      font-size: 11px;
+    }
+    .wallet-transaction span { color: var(--muted); }
+    .wallet-transaction strong { color: var(--ink); white-space: nowrap; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .stat-card {
+      min-height: 91px;
+      padding: 12px 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 5px 15px rgba(32, 58, 92, .035);
+    }
+    .stat-card span { display: block; color: var(--muted); font-size: 10px; line-height: 1.3; }
+    .stat-card strong { display: block; margin-top: 7px; color: var(--ink); font-size: 23px; letter-spacing: -.04em; }
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 11px;
+    }
+    .section-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.025em; }
+    .section-heading span { color: var(--muted); font-size: 11px; }
+    .filters {
+      display: flex;
+      gap: 7px;
+      margin: 0 -18px 13px;
+      padding: 0 18px 3px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter {
+      min-height: 35px;
+      padding: 0 12px;
+      flex: 0 0 auto;
+      border: 1px solid #e1e8f0;
+      border-radius: 20px;
+      color: #64768d;
+      background: white;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .filter.active { color: white; border-color: var(--blue); background: var(--blue); }
+    .order-list { display: grid; gap: 11px; }
+    .order-card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: white;
+      box-shadow: 0 5px 18px rgba(32, 58, 92, .04);
+    }
+    .order-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .order-number { margin: 0; font-size: 15px; font-weight: 800; }
+    .order-customer { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .status {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .035em;
+    }
+    .status.new { color: var(--blue); background: #e8f0ff; }
+    .status.awaiting-payment { color: var(--yellow); background: var(--yellow-pale); }
+    .status.preparing { color: var(--yellow); background: var(--yellow-pale); }
+    .status.ready { color: var(--green); background: var(--green-pale); }
+    .status.completed { color: #617187; background: #edf1f5; }
+    .order-items {
+      display: grid;
+      gap: 7px;
+      margin: 13px 0;
+      padding: 11px 0;
+      border-top: 1px solid #eef1f5;
+      border-bottom: 1px solid #eef1f5;
+    }
+    .order-item { display: flex; justify-content: space-between; gap: 8px; color: #526780; font-size: 12px; }
+    .order-item strong { color: #334b68; }
+    .order-request {
+      margin: 0 0 12px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      color: #63758b;
+      background: #f5f7fa;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .order-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .order-time { color: var(--muted); font-size: 11px; }
+    .order-total { color: var(--ink); font-size: 13px; font-weight: 800; }
+    .status-action {
+      width: 100%;
+      min-height: 40px;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 10px;
+      color: white;
+      background: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .status-action.ready-action { background: var(--green); }
+    .status-action.payment-action { color: var(--yellow); background: var(--yellow-pale); cursor: default; }
+    .status-action.cancel-action { color: #a43b3b; background: #fff0f0; }
+    .status-action.completed-action { color: var(--green); background: var(--green-pale); cursor: default; }
+    .empty-state {
+      padding: 30px 18px;
+      border: 1px dashed #d8e1eb;
+      border-radius: 14px;
+      color: var(--muted);
+      background: white;
+      font-size: 13px;
+      text-align: center;
+    }
+    .toast {
+      position: fixed;
+      z-index: 10;
+      bottom: 18px;
+      left: 50%;
+      width: calc(min(100%, 440px) - 36px);
+      padding: 12px 14px;
+      transform: translateX(-50%);
+      border-radius: 11px;
+      color: white;
+      background: #273b53;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .toast[hidden] { display: none; }
+    .screen-footer { margin-top: 22px; color: #98a4b3; font-size: 10px; line-height: 1.5; text-align: center; }
+    @media (min-width: 600px) {
+      body { padding: 22px 0; }
+      .phone { min-height: calc(100vh - 44px); border-radius: 26px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🍴</div>
+        <div>
+          <div class="brand-name">Cafeteria Online Menu</div>
+          <div class="brand-caption">Staff order monitor</div>
+        </div>
+      </div>
+      <a class="student-link" href="/student.html">Student portal</a>
+    </header>
+
+    <main class="main">
+      <section class="screen active" id="loginScreen" aria-labelledby="loginTitle">
+        <p class="eyebrow">Staff access</p>
+        <div class="hero">
+          <strong>Keep every order moving.</strong>
+          <span>Manage preparation and pickup from your phone.</span>
+        </div>
+        <h1 class="screen-title" id="loginTitle">Staff sign in</h1>
+        <p class="intro">Sign in to open the Campus Canteen order monitor.</p>
+        <form id="loginForm" novalidate>
+          <label class="field-label" for="staffId">Staff ID</label>
+          <input class="field" id="staffId" name="staffId" type="text" autocomplete="username" placeholder="Enter your staff ID" required />
+          <label class="field-label" for="password">Password</label>
+          <div class="password-wrap">
+            <input class="field" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+            <button class="show-password" id="togglePassword" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
+          <p class="helper">Sign in using the cafeteria staff account configured by the system administrator.</p>
+          <div class="login-actions">
+            <button class="primary" type="submit">Log in</button>
+          </div>
+        </form>
+        <div class="privacy-note">Credit changes are recorded with your staff ID. Add funds only after verifying that the school received them.</div>
+        <p class="screen-footer">Cafeteria staff portal · Mobile-friendly demo</p>
+      </section>
+
+      <section class="screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
+        <div class="dashboard-head">
+          <div>
+            <p class="eyebrow">Campus Canteen · Staff monitor</p>
+            <h1 id="dashboardTitle">Orders</h1>
+          </div>
+          <div class="header-actions">
+            <button class="icon-button" id="refreshOrders" type="button" aria-label="Refresh orders">↻ Refresh</button>
+            <button class="icon-button" id="logout" type="button">Log out</button>
+          </div>
+        </div>
+        <div class="demo-banner" id="connectionStatus" role="status">Connecting to the order server…</div>
+        <section class="wallet-panel" aria-labelledby="walletTitle">
+          <h2 id="walletTitle">Campus credit accounts</h2>
+          <p class="wallet-help">Create student accounts and add credit only after verifying funds were received through the school’s process.</p>
+          <form id="studentAccountForm">
+            <h3>Create student account</h3>
+            <label class="field-label" for="newStudentId">Student ID</label>
+            <input class="field" id="newStudentId" name="studentId" maxlength="32" autocomplete="off" required />
+            <label class="field-label" for="newStudentPassword">Initial password</label>
+            <input class="field" id="newStudentPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+            <p class="helper">Use at least 12 characters and give the password directly to the student.</p>
+            <button class="primary wallet-submit" type="submit">Create zero-balance account</button>
+          </form>
+          <form id="staffAccountForm">
+            <h3>Create staff account</h3>
+            <label class="field-label" for="newStaffId">Staff ID</label>
+            <input class="field" id="newStaffId" name="staffId" maxlength="32" autocomplete="off" required />
+            <label class="field-label" for="newStaffAccountPassword">Initial password</label>
+            <input class="field" id="newStaffAccountPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+            <p class="helper">Give the password directly to the staff member. Each staff action is attributed to their account.</p>
+            <button class="secondary wallet-submit" type="submit">Create staff account</button>
+          </form>
+          <form id="topupForm">
+            <h3>Record verified funds</h3>
+            <label class="field-label" for="topupStudentId">Student ID</label>
+            <input class="field" id="topupStudentId" name="studentId" maxlength="32" autocomplete="off" required />
+            <label class="field-label" for="topupAmount">Amount received (₱)</label>
+            <input class="field" id="topupAmount" name="amount" type="number" min="0.01" max="50000" step="0.01" required />
+            <label class="field-label" for="topupReference">Receipt / verification reference</label>
+            <input class="field" id="topupReference" name="reference" maxlength="100" autocomplete="off" required />
+            <button class="primary wallet-submit" type="submit">Add verified credit</button>
+          </form>
+          <div class="wallet-ledger">
+            <div class="section-heading"><h3>Recent wallet activity</h3><button class="icon-button" id="refreshWallet" type="button">Refresh</button></div>
+            <div id="walletTransactions" class="wallet-transactions" aria-live="polite">Loading wallet activity…</div>
+          </div>
+          <details class="staff-settings">
+            <summary>Change staff password</summary>
+            <form id="staffPasswordForm">
+              <label class="field-label" for="currentStaffPassword">Current password</label>
+              <input class="field" id="currentStaffPassword" name="currentPassword" type="password" autocomplete="current-password" required />
+              <label class="field-label" for="newStaffPassword">New password</label>
+              <input class="field" id="newStaffPassword" name="newPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+              <button class="primary wallet-submit" type="submit">Update password</button>
+            </form>
+          </details>
+        </section>
+        <div class="stats" aria-label="Order summary">
+          <div class="stat-card"><span>New / payment</span><strong id="newCount">0</strong></div>
+          <div class="stat-card"><span>Preparing</span><strong id="preparingCount">0</strong></div>
+          <div class="stat-card"><span>Ready for pickup</span><strong id="readyCount">0</strong></div>
+        </div>
+        <div class="section-heading">
+          <h2>Recent orders</h2>
+          <span id="orderCount">0 orders</span>
+        </div>
+        <div class="filters" role="tablist" aria-label="Filter orders">
+          <button class="filter active" type="button" role="tab" aria-selected="true" data-filter="all">All</button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="Awaiting payment">Payment</button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="New">New</button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="Preparing">Preparing</button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="Ready">Ready</button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="Completed">Completed</button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="Cancelled">Cancelled</button>
+        </div>
+        <div class="order-list" id="orderList" aria-live="polite"></div>
+        <p class="screen-footer">Order updates are saved on the shared server and refreshed automatically.</p>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <script>
+    let orders = [];
+    let selectedFilter = "all";
+    let refreshTimer;
+    let refreshInProgress = false;
+    let toastTimeout;
+
+    const screens = Array.from(document.querySelectorAll(".screen"));
+
+    function showScreen(screenId) {
+      const target = document.getElementById(screenId);
+      if (!target) return;
+      screens.forEach(screen => {
+        const active = screen === target;
+        screen.classList.toggle("active", active);
+        screen.setAttribute("aria-hidden", String(!active));
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function notify(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.hidden = false;
+      window.clearTimeout(toastTimeout);
+      toastTimeout = window.setTimeout(() => { toast.hidden = true; }, 2600);
+    }
+
+    function renderStats(orders) {
+      document.getElementById("newCount").textContent = String(orders.filter(order => order.status === "New" || order.status === "Awaiting payment").length);
+      document.getElementById("preparingCount").textContent = String(orders.filter(order => order.status === "Preparing").length);
+      document.getElementById("readyCount").textContent = String(orders.filter(order => order.status === "Ready").length);
+    }
+
+    function renderOrders() {
+      const visibleOrders = selectedFilter === "all" ? orders : orders.filter(order => order.status === selectedFilter);
+      renderStats(orders);
+      document.getElementById("orderCount").textContent = `${orders.length} ${orders.length === 1 ? "order" : "orders"}`;
+
+      const list = document.getElementById("orderList");
+      list.replaceChildren();
+      if (visibleOrders.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = selectedFilter === "all"
+          ? "No orders yet. New student orders will appear here automatically."
+          : `No ${selectedFilter.toLowerCase()} orders right now.`;
+        list.appendChild(empty);
+        return;
+      }
+
+      visibleOrders.forEach(order => {
+        const card = document.createElement("article");
+        card.className = "order-card";
+
+        const top = document.createElement("div");
+        top.className = "order-card-top";
+        const customer = document.createElement("div");
+        const number = document.createElement("h3");
+        number.className = "order-number";
+        number.textContent = `Order ${order.orderNumber}`;
+        const customerName = document.createElement("p");
+        customerName.className = "order-customer";
+        customerName.textContent = order.studentId ? `Student ${order.studentId}` : "Legacy order";
+        customer.append(number, customerName);
+
+        const status = document.createElement("span");
+        status.className = `status ${order.status.toLowerCase().replace(/\s+/g, "-")}`;
+        status.textContent = order.status;
+        top.append(customer, status);
+
+        const items = document.createElement("div");
+        items.className = "order-items";
+        order.items.forEach(item => {
+          const row = document.createElement("div");
+          row.className = "order-item";
+          const name = document.createElement("span");
+          name.textContent = item.name;
+          const quantity = document.createElement("strong");
+          quantity.textContent = `×${item.quantity}`;
+          row.append(name, quantity);
+          items.appendChild(row);
+        });
+
+        const bottom = document.createElement("div");
+        bottom.className = "order-card-bottom";
+        const time = document.createElement("span");
+        time.className = "order-time";
+        time.textContent = new Date(order.createdAt).toLocaleString();
+        const total = document.createElement("span");
+        total.className = "order-total";
+        total.textContent = `₱${Number(order.total).toFixed(2)}`;
+        const payment = document.createElement("span");
+        payment.className = "order-time";
+        payment.textContent = order.paymentStatus === "paid" ? "Campus credit · Paid" :
+          order.paymentStatus === "awaiting_payment" ? "Legacy RFID order · payment pending" : "Legacy pay-at-pickup order";
+        const summary = document.createElement("div");
+        summary.className = "order-card-bottom";
+        summary.append(time, total);
+
+        card.append(top, items);
+        const specialRequest = order.specialRequest || order.request;
+        if (specialRequest) {
+          const request = document.createElement("p");
+          request.className = "order-request";
+          request.textContent = `Special request: ${specialRequest}`;
+          card.appendChild(request);
+        }
+        card.append(summary, payment);
+
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "status-action";
+        if (order.status === "New") action.textContent = "Start preparing";
+        else if (order.status === "Preparing") {
+          action.textContent = "Mark ready for pickup";
+          action.classList.add("ready-action");
+        } else if (order.status === "Ready") action.textContent = "Mark picked up";
+        else if (order.status === "Awaiting payment") {
+          action.textContent = "Awaiting RFID payment";
+          action.classList.add("payment-action");
+          action.disabled = true;
+        } else {
+          action.textContent = "Order complete";
+          action.classList.add("completed-action");
+          action.disabled = true;
+        }
+        if (order.status === "New" && order.paymentStatus !== "paid") {
+          action.textContent = "Unpaid legacy order · locked";
+          action.classList.add("payment-action");
+          action.disabled = true;
+        }
+        if (order.status === "Cancelled") action.textContent = "Cancelled · credit refunded";
+        if (!action.disabled) action.addEventListener("click", () => advanceOrder(order, action));
+        card.appendChild(action);
+        if (order.status === "New" && order.paymentStatus === "paid") {
+          const cancel = document.createElement("button");
+          cancel.type = "button";
+          cancel.className = "status-action cancel-action";
+          cancel.textContent = "Cancel order and refund credit";
+          cancel.addEventListener("click", () => cancelOrder(order, cancel));
+          card.appendChild(cancel);
+        }
+        list.appendChild(card);
+      });
+    }
+
+    async function refreshOrders(showError = true) {
+      if (refreshInProgress || !document.getElementById("dashboardScreen").classList.contains("active")) return;
+      refreshInProgress = true;
+      try {
+        const response = await fetch("/api/orders", { cache: "no-store" });
+        const body = await response.text();
+        let result;
+        try {
+          result = JSON.parse(body);
+        } catch {
+          throw new Error(`Order server returned HTTP ${response.status} instead of JSON.`);
+        }
+        if (!response.ok) throw new Error(result.error || `Could not load orders (HTTP ${response.status}).`);
+        if (!Array.isArray(result)) throw new Error("Order server returned invalid order data.");
+        orders = result;
+        document.getElementById("connectionStatus").textContent = `Connected · Orders refresh automatically every 5 seconds`;
+        renderOrders();
+      } catch (error) {
+        document.getElementById("connectionStatus").textContent = error.message;
+        if (showError) notify("Could not load orders from the server. Check your connection and refresh.");
+      } finally {
+        refreshInProgress = false;
+      }
+    }
+
+    async function advanceOrder(order, button) {
+      const nextStatus = order.status === "New" ? "Preparing" :
+        order.status === "Preparing" ? "Ready" :
+        order.status === "Ready" ? "Completed" : null;
+      if (!nextStatus) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/orders/${encodeURIComponent(order.id)}/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus })
+        });
+        const body = await response.text();
+        let result;
+        try {
+          result = JSON.parse(body);
+        } catch {
+          throw new Error(`Order server returned HTTP ${response.status} instead of JSON.`);
+        }
+        if (!response.ok) throw new Error(result.error || `Could not update order (HTTP ${response.status}).`);
+        const index = orders.findIndex(entry => entry.id === result.id);
+        if (index >= 0) orders[index] = result;
+        renderOrders();
+        notify(`Order ${result.orderNumber} moved to ${result.status.toLowerCase()}.`);
+      } catch (error) {
+        notify(error.message);
+        await refreshOrders(false);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function cancelOrder(order, button) {
+      if (!window.confirm(`Cancel order ${order.orderNumber} and return ₱${Number(order.total).toFixed(2)} to the student's campus credit?`)) return;
+      button.disabled = true;
+      try {
+        const result = await requestJson(`/api/orders/${encodeURIComponent(order.id)}/cancel`, { method: "POST" });
+        const index = orders.findIndex(entry => entry.id === result.id);
+        if (index >= 0) orders[index] = result;
+        renderOrders();
+        notify(`Order ${result.orderNumber} cancelled and credit refunded.`);
+        await refreshWalletTransactions();
+      } catch (error) {
+        notify(error.message);
+        await refreshOrders(false);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function requestJson(url, options) {
+      const response = await fetch(url, options);
+      const body = await response.text();
+      let result;
+      try {
+        result = JSON.parse(body);
+      } catch {
+        throw new Error(`Server returned HTTP ${response.status} instead of JSON.`);
+      }
+      if (!response.ok) throw new Error(result.error || `Request failed (HTTP ${response.status}).`);
+      return result;
+    }
+
+    async function refreshWalletTransactions() {
+      const list = document.getElementById("walletTransactions");
+      try {
+        const transactions = await requestJson("/api/wallet/transactions", { cache: "no-store" });
+        list.replaceChildren();
+        if (!transactions.length) {
+          list.textContent = "No wallet activity yet.";
+          return;
+        }
+        transactions.forEach(transaction => {
+          const row = document.createElement("div");
+          row.className = "wallet-transaction";
+          const detail = document.createElement("span");
+          const kind = transaction.type === "credit" ? "Top-up" :
+            transaction.type === "refund" ? "Order refund" : "Order payment";
+          const reference = transaction.reference ? ` · ${transaction.reference}` : transaction.orderNumber ? ` · ${transaction.orderNumber}` : "";
+          const actor = transaction.staffId ? ` · by ${transaction.staffId}` : "";
+          detail.textContent = `${transaction.studentId} · ${kind}${reference}${actor}`;
+          const amount = document.createElement("strong");
+          const sign = transaction.type === "debit" ? "−" : "+";
+          amount.textContent = `${sign}₱${(transaction.amountCents / 100).toFixed(2)}`;
+          row.append(detail, amount);
+          list.appendChild(row);
+        });
+      } catch (error) {
+        list.textContent = error.message;
+      }
+    }
+
+    function showDashboard() {
+      showScreen("dashboardScreen");
+      refreshOrders();
+      refreshWalletTransactions();
+      window.clearInterval(refreshTimer);
+      refreshTimer = window.setInterval(() => {
+        refreshOrders(false);
+        refreshWalletTransactions();
+      }, 5000);
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const staffId = document.getElementById("staffId").value.trim();
+      const password = document.getElementById("password").value;
+      if (!staffId || !password) {
+        notify("Enter both your staff ID and password to continue.");
+        if (!staffId) document.getElementById("staffId").focus();
+        else document.getElementById("password").focus();
+        return;
+      }
+      const submit = event.currentTarget.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const result = await requestJson("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: staffId, password })
+        });
+        if (!result.user || result.user.role !== "staff") {
+          await fetch("/api/auth/logout", { method: "POST" });
+          throw new Error("Use an authorized staff account to sign in here.");
+        }
+        showDashboard();
+      } catch (error) {
+        notify(error instanceof TypeError ? "Could not reach the cafeteria server. Try again." : error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("togglePassword").addEventListener("click", event => {
+      const password = document.getElementById("password");
+      const button = event.currentTarget;
+      const showing = password.type === "password";
+      password.type = showing ? "text" : "password";
+      button.textContent = showing ? "Hide" : "Show";
+      button.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+      button.setAttribute("aria-pressed", String(showing));
+    });
+
+    document.querySelectorAll("[data-go]").forEach(button => {
+      button.addEventListener("click", () => showScreen(button.dataset.go));
+    });
+
+    document.querySelector(".filters").addEventListener("click", event => {
+      const filter = event.target.closest("[data-filter]");
+      if (!filter) return;
+      selectedFilter = filter.dataset.filter;
+      document.querySelectorAll(".filter").forEach(button => {
+        const active = button === filter;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      renderOrders();
+    });
+
+    document.getElementById("refreshOrders").addEventListener("click", () => refreshOrders());
+    document.getElementById("studentAccountForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const result = await requestJson("/api/wallet/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentId: form.elements.studentId.value.trim(),
+            password: form.elements.password.value
+          })
+        });
+        form.reset();
+        notify(`Wallet account created for ${result.student.id}. Add credit only after verifying funds received.`);
+      } catch (error) {
+        notify(error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("topupForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const result = await requestJson("/api/wallet/topups", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentId: form.elements.studentId.value.trim(),
+            amount: form.elements.amount.value,
+            reference: form.elements.reference.value.trim()
+          })
+        });
+        form.reset();
+        notify(`Added ₱${(result.transaction.amountCents / 100).toFixed(2)} to ${result.student.id}'s wallet.`);
+        await refreshWalletTransactions();
+      } catch (error) {
+        notify(error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("staffAccountForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const result = await requestJson("/api/wallet/staff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            staffId: form.elements.staffId.value.trim(),
+            password: form.elements.password.value
+          })
+        });
+        form.reset();
+        notify(`Staff account created for ${result.staff.id}.`);
+      } catch (error) {
+        notify(error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("refreshWallet").addEventListener("click", refreshWalletTransactions);
+    document.getElementById("staffPasswordForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        await requestJson("/api/auth/password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentPassword: form.elements.currentPassword.value,
+            newPassword: form.elements.newPassword.value
+          })
+        });
+        form.reset();
+        notify("Your staff password has been updated.");
+      } catch (error) {
+        notify(error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+    document.getElementById("logout").addEventListener("click", async () => {
+      window.clearInterval(refreshTimer);
+      try {
+        await fetch("/api/auth/logout", { method: "POST" });
+      } catch (error) {
+        console.error("Could not sign out from the cafeteria server:", error);
+      }
+      document.getElementById("loginForm").reset();
+      showScreen("loginScreen");
+    });
+
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then(result => {
+        if (result && result.user && result.user.role === "staff") showDashboard();
+      })
+      .catch(error => console.error("Could not restore cafeteria staff session:", error));
+  </script>
+</body>
+</html>
