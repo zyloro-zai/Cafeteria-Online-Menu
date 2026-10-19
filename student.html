@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f7fb" />
+  <title>Student Cafeteria Portal</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c2f49;
+      --muted: #75849a;
+      --blue: #244d83;
+      --blue-dark: #193b69;
+      --blue-pale: #edf4fc;
+      --line: #e4eaf1;
+      --green: #279466;
+      --canvas: #f3f6fa;
+      --white: #fff;
+      --shadow: 0 12px 34px rgba(28, 54, 88, .09);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .phone {
+      width: min(100%, 480px);
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #fbfcfe;
+      box-shadow: 0 0 48px rgba(27, 52, 85, .08);
+      position: relative;
+      overflow: hidden;
+    }
+    .topbar {
+      min-height: 70px;
+      padding: 13px 19px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.96);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: white;
+      background: var(--blue);
+      font-size: 21px;
+    }
+    .brand-name { font-size: 15px; font-weight: 800; letter-spacing: -.025em; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .user-chip {
+      display: none;
+      max-width: 120px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .user-chip.visible { display: block; }
+    .logout-button {
+      display: none;
+      flex: 0 0 auto;
+      border: 0;
+      color: var(--blue);
+      background: transparent;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .logout-button.visible { display: block; }
+    .main { padding: 22px 18px 110px; }
+    .screen { display: none; animation: appear .2s ease-out; }
+    .screen.active { display: block; }
+    @keyframes appear { from { opacity: .55; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    .screen-title { margin-bottom: 7px; font-size: 27px; line-height: 1.16; letter-spacing: -.045em; }
+    .intro { margin-bottom: 23px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .login-hero {
+      min-height: 190px;
+      padding: 22px;
+      margin-bottom: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      border-radius: 23px;
+      color: white;
+      background: radial-gradient(circle at 82% 24%, rgba(255,255,255,.2) 0 15%, transparent 16%),
+        linear-gradient(145deg, #3669a1 0%, #1d426f 65%, #18395f 100%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .login-hero::before {
+      content: "🍽️";
+      position: absolute;
+      right: 24px;
+      top: 23px;
+      font-size: 63px;
+      filter: drop-shadow(0 7px 12px rgba(0,0,0,.17));
+    }
+    .login-hero strong { max-width: 210px; font-size: 22px; line-height: 1.17; }
+    .login-hero span { margin-top: 8px; color: rgba(255,255,255,.78); font-size: 12px; }
+    .field-label { display: block; margin: 15px 0 7px; font-size: 12px; font-weight: 700; }
+    .field {
+      width: 100%;
+      min-height: 49px;
+      padding: 0 14px;
+      border: 1px solid #dbe3ed;
+      border-radius: 12px;
+      color: var(--ink);
+      background: white;
+      outline: 0;
+      font-size: 14px;
+    }
+    .field:focus { border-color: #7396bf; box-shadow: 0 0 0 3px rgba(55, 103, 158, .12); }
+    .password-wrap { position: relative; }
+    .password-wrap .field { padding-right: 72px; }
+    .show-password {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 49px;
+      padding: 0 13px;
+      border: 0;
+      color: var(--blue);
+      background: transparent;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .helper { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .primary, .secondary {
+      width: 100%;
+      min-height: 49px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 13px;
+      font-size: 14px;
+      font-weight: 800;
+      transition: transform .15s ease, filter .15s ease;
+    }
+    .primary { color: white; background: var(--blue); box-shadow: 0 6px 13px rgba(36,77,131,.18); }
+    .primary:hover { background: var(--blue-dark); }
+    .secondary { color: var(--blue); background: var(--blue-pale); border: 1px solid #e0eaf5; }
+    .primary:active, .secondary:active { transform: scale(.985); }
+    .login-actions { margin-top: 21px; }
+    .text-action {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 5px;
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .privacy-note {
+      margin-top: 19px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f3f7fb;
+      color: #718096;
+      font-size: 11px;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .account-settings {
+      margin-top: 20px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: white;
+    }
+    .account-settings summary { color: var(--blue); font-size: 12px; font-weight: 800; cursor: pointer; }
+    .progress { display: flex; align-items: center; gap: 6px; margin-bottom: 23px; }
+    .progress span { height: 4px; flex: 1; border-radius: 9px; background: #e7edf4; }
+    .progress span.done { background: var(--blue); }
+    .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 21px; }
+    .back-button {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--blue);
+      background: white;
+      font-size: 21px;
+    }
+    .step-head-copy { min-width: 0; }
+    .step-head-copy .eyebrow { margin-bottom: 2px; }
+    .step-head-copy h1 { margin: 0; font-size: 21px; letter-spacing: -.035em; }
+    .current-canteen {
+      margin: -3px 0 17px;
+      padding: 10px 12px;
+      border-radius: 11px;
+      background: #f0f5fb;
+      color: #55708f;
+      font-size: 12px;
+    }
+    .category-tabs {
+      display: flex;
+      gap: 8px;
+      margin: 0 -18px 15px;
+      padding: 0 18px 3px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .category-tabs::-webkit-scrollbar { display: none; }
+    .category-tab {
+      min-height: 37px;
+      padding: 0 14px;
+      flex: 0 0 auto;
+      border: 1px solid #e1e8f0;
+      border-radius: 20px;
+      color: #64768d;
+      background: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .category-tab.active { color: white; border-color: var(--blue); background: var(--blue); }
+    .food-list { display: grid; gap: 11px; }
+    .food-card {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: white;
+      box-shadow: 0 5px 18px rgba(32, 58, 92, .04);
+    }
+    .food-art {
+      min-height: 82px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #f6e9c8, #d9a76e);
+      font-size: 37px;
+    }
+    .food-art.drinks { background: linear-gradient(145deg, #e3f1ff, #acd1e8); }
+    .food-art.snacks { background: linear-gradient(145deg, #fff1d0, #e9bd76); }
+    .food-art.dessert { background: linear-gradient(145deg, #f8e1e4, #e7b1ad); }
+    .food-info { min-width: 0; }
+    .food-name { margin: 0 0 4px; font-size: 14px; line-height: 1.25; }
+    .food-description { margin: 0 0 8px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .food-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .food-price { color: var(--blue); font-size: 14px; font-weight: 800; white-space: nowrap; }
+    .add-button {
+      min-width: 68px;
+      min-height: 34px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 9px;
+      color: white;
+      background: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .empty-menu {
+      padding: 36px 20px;
+      border: 1px dashed #d8e1eb;
+      border-radius: 15px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+    .sticky-cart {
+      position: fixed;
+      z-index: 5;
+      bottom: 0;
+      left: 50%;
+      width: min(100%, 480px);
+      padding: 12px 18px max(14px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(251,252,254,0), #fbfcfe 18%);
+    }
+    .cart-summary-button {
+      width: 100%;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 15px;
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 9px 24px rgba(32, 70, 117, .25);
+    }
+    .cart-summary-button:disabled { opacity: .48; box-shadow: none; cursor: default; }
+    .cart-summary-left { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 800; }
+    .cart-count { min-width: 24px; padding: 4px 7px; border-radius: 8px; color: var(--blue); background: white; font-size: 11px; text-align: center; }
+    .cart-total { font-size: 14px; font-weight: 800; }
+    .cart-list { display: grid; gap: 10px; }
+    .cart-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+    }
+    .cart-row strong { display: block; font-size: 13px; }
+    .cart-row small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .quantity {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 9px;
+    }
+    .quantity button {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--blue);
+      background: #f7f9fc;
+      font-size: 17px;
+    }
+    .quantity span { min-width: 14px; text-align: center; font-size: 12px; font-weight: 700; }
+    .cart-row-price { align-self: start; color: var(--blue); font-size: 13px; font-weight: 800; white-space: nowrap; }
+    .totals {
+      display: grid;
+      gap: 12px;
+      margin-top: 17px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #f1f5fa;
+    }
+    .total-line { display: flex; justify-content: space-between; gap: 12px; color: #687a90; font-size: 13px; }
+    .total-line strong { color: var(--ink); }
+    .total-line.final { padding-top: 11px; border-top: 1px solid #dce5ef; color: var(--ink); font-size: 15px; font-weight: 800; }
+    .request-field { min-height: 82px; padding-top: 12px; resize: vertical; }
+    .place-order { margin-top: 19px; }
+    .confirmation {
+      padding: 29px 20px;
+      border-radius: 20px;
+      background: white;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .checkmark {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 17px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: white;
+      background: var(--green);
+      font-size: 35px;
+    }
+    .confirmation h1 { margin-bottom: 8px; font-size: 25px; letter-spacing: -.04em; }
+    .confirmation > p { margin-bottom: 20px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .order-number {
+      padding: 15px;
+      border: 1px dashed #c9d8e7;
+      border-radius: 14px;
+      background: #f5f8fb;
+    }
+    .order-number small { display: block; color: var(--muted); font-size: 11px; }
+    .order-number strong { display: block; margin-top: 3px; color: var(--blue); font-size: 27px; letter-spacing: .04em; }
+    .order-status { margin: 17px 0; text-align: left; }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      color: #566a82;
+      font-size: 12px;
+    }
+    .status-dot { width: 11px; height: 11px; border-radius: 50%; background: #d7e0e9; }
+    .status-row.active .status-dot { background: var(--green); box-shadow: 0 0 0 4px #e5f6ec; }
+    .order-actions { display: grid; gap: 9px; }
+    .toast {
+      position: fixed;
+      z-index: 10;
+      bottom: 86px;
+      left: 50%;
+      width: calc(min(100%, 440px) - 36px);
+      padding: 12px 14px;
+      transform: translateX(-50%);
+      border-radius: 11px;
+      color: white;
+      background: #273b53;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .toast[hidden] { display: none; }
+    .screen-footer { margin-top: 20px; color: #98a4b3; font-size: 10px; line-height: 1.5; text-align: center; }
+
+    @media (min-width: 600px) {
+      body { padding: 22px 0; }
+      .phone { min-height: calc(100vh - 44px); border-radius: 26px; }
+      .sticky-cart { bottom: 22px; border-radius: 0 0 26px 26px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🍴</div>
+        <div>
+          <div class="brand-name">Cafeteria Online Menu</div>
+          <div class="brand-caption">Student ordering portal</div>
+        </div>
+      </div>
+      <div class="user-chip" id="userChip"></div>
+      <button class="logout-button" id="logout" type="button">Log out</button>
+    </header>
+
+    <main class="main">
+      <section class="screen active" id="loginScreen" aria-labelledby="loginTitle">
+        <p class="eyebrow">Welcome</p>
+        <div class="login-hero">
+          <strong>Good food, less waiting.</strong>
+          <span>Order ahead from your campus canteen.</span>
+        </div>
+        <h1 class="screen-title" id="loginTitle">Sign in to continue</h1>
+        <p class="intro">Use your student account to start an order.</p>
+        <form id="loginForm" novalidate>
+          <label class="field-label" for="studentId">Student ID</label>
+          <input class="field" id="studentId" name="studentId" type="text" autocomplete="username" placeholder="Enter your student ID" required />
+          <label class="field-label" for="password">Password</label>
+          <div class="password-wrap">
+            <input class="field" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+            <button class="show-password" id="togglePassword" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
+          <p class="helper">Use the student ID and password provided by cafeteria staff.</p>
+          <div class="login-actions">
+            <button class="primary" type="submit">Log in</button>
+          </div>
+        </form>
+        <div class="privacy-note">Your wallet is debited when you place an order. Ask cafeteria staff to create your account.</div>
+        <p class="screen-footer">Student ordering portal · Mobile-friendly demo</p>
+      </section>
+
+      <section class="screen" id="menuScreen" aria-labelledby="menuTitle">
+        <div class="progress" aria-label="Step 1 of 2">
+          <span class="done"></span><span></span>
+        </div>
+        <div class="step-head">
+          <span aria-hidden="true" style="width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#edf4fc;">🍽️</span>
+          <div class="step-head-copy">
+            <p class="eyebrow">Campus Canteen · Step 1 of 2</p>
+            <h1 id="menuTitle">Choose your food</h1>
+          </div>
+        </div>
+        <div class="current-canteen">📍 One canteen · All menu items available here</div>
+        <div class="category-tabs" role="tablist" aria-label="Food categories">
+          <button class="category-tab active" type="button" role="tab" aria-selected="true" data-category="all">All</button>
+          <button class="category-tab" type="button" role="tab" aria-selected="false" data-category="meal">Meals</button>
+          <button class="category-tab" type="button" role="tab" aria-selected="false" data-category="drinks">Drinks</button>
+          <button class="category-tab" type="button" role="tab" aria-selected="false" data-category="snacks">Snacks</button>
+          <button class="category-tab" type="button" role="tab" aria-selected="false" data-category="dessert">Dessert</button>
+        </div>
+        <div class="food-list" id="foodList" aria-live="polite"></div>
+        <details class="account-settings">
+          <summary>Change account password</summary>
+          <form id="passwordForm">
+            <label class="field-label" for="currentPassword">Current password</label>
+            <input class="field" id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required />
+            <label class="field-label" for="newPassword">New password</label>
+            <input class="field" id="newPassword" name="newPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+            <p class="helper">Use at least 12 characters.</p>
+            <button class="secondary" type="submit">Update password</button>
+          </form>
+        </details>
+      </section>
+
+      <section class="screen" id="cartScreen" aria-labelledby="cartTitle">
+        <div class="progress" aria-label="Step 2 of 2">
+          <span class="done"></span><span class="done"></span>
+        </div>
+        <div class="step-head">
+          <button class="back-button" type="button" data-go="menuScreen" aria-label="Back to menu">‹</button>
+          <div class="step-head-copy">
+            <p class="eyebrow">Campus Canteen · Step 2 of 2</p>
+            <h1 id="cartTitle">Review your order</h1>
+          </div>
+        </div>
+        <div class="current-canteen">📍 Campus Canteen · Pickup at the canteen counter</div>
+        <div class="cart-list" id="cartList"></div>
+        <div class="totals">
+          <div class="total-line"><span>Subtotal</span><strong id="subtotal">₱0.00</strong></div>
+          <div class="total-line"><span>Service fee</span><strong id="serviceFee">₱0.00</strong></div>
+          <div class="total-line final"><span>Total</span><strong id="total">₱0.00</strong></div>
+        </div>
+        <label class="field-label" for="request">Special request <span style="color:#8795a7;font-weight:400;">(optional)</span></label>
+        <textarea class="field request-field" id="request" maxlength="160" placeholder="Add a note for the canteen"></textarea>
+        <div class="current-canteen" id="walletBalance">Campus credit available: ₱0.00 · This order is charged when placed.</div>
+        <button class="primary place-order" id="placeOrder" type="button"><span id="placeOrderLabel">Pay and place order</span> · <span id="placeOrderTotal">₱0.00</span></button>
+        <button class="text-action" type="button" id="backToMenu">Add more food</button>
+      </section>
+
+      <section class="screen" id="confirmationScreen" aria-labelledby="confirmationTitle">
+        <div class="progress" aria-label="Order placed">
+          <span class="done"></span><span class="done"></span><span class="done"></span>
+        </div>
+        <div class="confirmation">
+          <div class="checkmark" aria-hidden="true">✓</div>
+          <h1 id="confirmationTitle">Payment received!</h1>
+          <p>Your paid order has been sent to <strong id="confirmedCanteen">Campus Canteen</strong>. Keep this number for pickup.</p>
+          <div class="order-number"><small>Order number</small><strong id="orderNumber">—</strong></div>
+          <div class="order-status">
+            <div class="status-row active"><span class="status-dot"></span><span>Paid · order received</span></div>
+            <div class="status-row"><span class="status-dot"></span><span>Being prepared</span></div>
+            <div class="status-row"><span class="status-dot"></span><span>Ready for pickup</span></div>
+          </div>
+          <div class="order-actions">
+            <button class="primary" type="button" id="trackOrder">Track order</button>
+            <button class="secondary" type="button" id="newOrder">Start a new order</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div class="sticky-cart" id="stickyCart" hidden>
+      <button class="cart-summary-button" id="openCart" type="button" disabled>
+        <span class="cart-summary-left"><span aria-hidden="true">🛒</span><span class="cart-count" id="cartCount">0</span><span>View order</span></span>
+        <span class="cart-total" id="stickyTotal">₱0.00</span>
+      </button>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <script>
+    const menuItems = [
+      { id: 1, name: "Chicken Adobo + Rice", price: 55, category: "meal", image: "🍗", description: "Slow-cooked adobo with steamed rice" },
+      { id: 2, name: "Beef Broccoli Bowl", price: 60, category: "meal", image: "🥘", description: "Tender beef, broccoli and rice" },
+      { id: 3, name: "Pork BBQ + Rice", price: 50, category: "meal", image: "🍢", description: "Grilled barbecue with rice" },
+      { id: 4, name: "Spaghetti", price: 45, category: "meal", image: "🍝", description: "Filipino-style sweet tomato sauce" },
+      { id: 5, name: "Iced Coffee", price: 25, category: "drinks", image: "🧋", description: "Freshly brewed and served cold" },
+      { id: 6, name: "Milk Tea", price: 30, category: "drinks", image: "🥤", description: "Creamy milk tea with pearls" },
+      { id: 7, name: "Fruit Shake", price: 35, category: "drinks", image: "🍹", description: "Fresh blended seasonal fruit" },
+      { id: 8, name: "Fresh Lemonade", price: 20, category: "drinks", image: "🍋", description: "Cool, freshly squeezed lemonade" },
+      { id: 9, name: "Cheeseburger", price: 40, category: "snacks", image: "🍔", description: "Beef patty, cheese and fresh lettuce" },
+      { id: 10, name: "French Fries", price: 28, category: "snacks", image: "🍟", description: "Crispy golden fries" },
+      { id: 11, name: "Pancakes", price: 32, category: "dessert", image: "🥞", description: "Fluffy pancakes with syrup" },
+      { id: 12, name: "Fruit Parfait", price: 38, category: "dessert", image: "🍨", description: "Yogurt, fruit and crunchy granola" }
+    ];
+    const cart = new Map();
+    const orderStatusLabels = ["Order received", "Being prepared", "Ready for pickup"];
+    const orderCanteen = "Campus Canteen";
+    let selectedCategory = "all";
+    let currentOrderId = "";
+    let walletBalance = 0;
+    let toastTimeout;
+
+    const screens = Array.from(document.querySelectorAll(".screen"));
+    const money = amount => `₱${amount.toFixed(2)}`;
+    const getSubtotal = () => Array.from(cart.values()).reduce((sum, entry) => sum + entry.item.price * entry.quantity, 0);
+    const getServiceFee = () => getSubtotal() > 0 ? Math.round(getSubtotal() * 5) / 100 : 0;
+
+    function showScreen(screenId) {
+      const nextScreen = document.getElementById(screenId);
+      if (!nextScreen) return;
+      screens.forEach(screen => {
+        const active = screen === nextScreen;
+        screen.classList.toggle("active", active);
+        screen.setAttribute("aria-hidden", String(!active));
+      });
+      document.getElementById("stickyCart").hidden = screenId !== "menuScreen";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function notify(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.hidden = false;
+      window.clearTimeout(toastTimeout);
+      toastTimeout = window.setTimeout(() => { toast.hidden = true; }, 2600);
+    }
+
+    function updateWalletBalance(balance) {
+      walletBalance = Number(balance);
+      document.getElementById("walletBalance").textContent = `Campus credit available: ${money(walletBalance)} · This order is charged when placed.`;
+      if (document.getElementById("userChip").classList.contains("visible")) {
+        document.getElementById("userChip").textContent = `${currentUserId} · ${money(walletBalance)}`;
+      }
+    }
+
+    function renderMenu() {
+      const visibleItems = menuItems.filter(item => selectedCategory === "all" || item.category === selectedCategory);
+      const list = document.getElementById("foodList");
+      list.replaceChildren();
+      if (!visibleItems.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-menu";
+        empty.textContent = "No items are available in this category right now.";
+        list.appendChild(empty);
+        return;
+      }
+      visibleItems.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "food-card";
+        const art = document.createElement("div");
+        art.className = `food-art ${item.category}`;
+        art.setAttribute("aria-hidden", "true");
+        art.textContent = item.image;
+        const info = document.createElement("div");
+        info.className = "food-info";
+        const name = document.createElement("h2");
+        name.className = "food-name";
+        name.textContent = item.name;
+        const description = document.createElement("p");
+        description.className = "food-description";
+        description.textContent = item.description;
+        const bottom = document.createElement("div");
+        bottom.className = "food-card-bottom";
+        const price = document.createElement("span");
+        price.className = "food-price";
+        price.textContent = `₱${item.price}`;
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "add-button";
+        add.textContent = cart.has(item.id) ? `Added (${cart.get(item.id).quantity})` : "Add";
+        add.setAttribute("aria-label", `Add ${item.name} to order`);
+        add.addEventListener("click", () => addToCart(item));
+        bottom.append(price, add);
+        info.append(name, description, bottom);
+        card.append(art, info);
+        list.appendChild(card);
+      });
+    }
+
+    function renderCartSummary() {
+      const count = Array.from(cart.values()).reduce((sum, entry) => sum + entry.quantity, 0);
+      const total = getSubtotal() + getServiceFee();
+      document.getElementById("cartCount").textContent = String(count);
+      document.getElementById("stickyTotal").textContent = money(total);
+      document.getElementById("openCart").disabled = count === 0;
+      document.getElementById("subtotal").textContent = money(getSubtotal());
+      document.getElementById("serviceFee").textContent = money(getServiceFee());
+      document.getElementById("total").textContent = money(total);
+      document.getElementById("placeOrderTotal").textContent = money(total);
+    }
+
+    function renderCart() {
+      const list = document.getElementById("cartList");
+      list.replaceChildren();
+      cart.forEach(({ item, quantity }) => {
+        const row = document.createElement("article");
+        row.className = "cart-row";
+        const details = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+        const unitPrice = document.createElement("small");
+        unitPrice.textContent = `₱${item.price} each`;
+        const controls = document.createElement("div");
+        controls.className = "quantity";
+        const decrease = document.createElement("button");
+        decrease.type = "button";
+        decrease.textContent = "−";
+        decrease.setAttribute("aria-label", `Remove one ${item.name}`);
+        decrease.addEventListener("click", () => changeQuantity(item.id, -1));
+        const quantityText = document.createElement("span");
+        quantityText.textContent = String(quantity);
+        const increase = document.createElement("button");
+        increase.type = "button";
+        increase.textContent = "+";
+        increase.setAttribute("aria-label", `Add one ${item.name}`);
+        increase.addEventListener("click", () => changeQuantity(item.id, 1));
+        controls.append(decrease, quantityText, increase);
+        details.append(name, unitPrice, controls);
+        const lineTotal = document.createElement("span");
+        lineTotal.className = "cart-row-price";
+        lineTotal.textContent = money(item.price * quantity);
+        row.append(details, lineTotal);
+        list.appendChild(row);
+      });
+      renderCartSummary();
+    }
+
+    function addToCart(item) {
+      const current = cart.get(item.id);
+      cart.set(item.id, { item, quantity: current ? current.quantity + 1 : 1 });
+      renderCartSummary();
+      renderMenu();
+      notify(`${item.name} added to your order.`);
+    }
+
+    function changeQuantity(itemId, change) {
+      const entry = cart.get(itemId);
+      if (!entry) return;
+      const quantity = entry.quantity + change;
+      if (quantity <= 0) cart.delete(itemId);
+      else cart.set(itemId, { ...entry, quantity });
+      renderCart();
+      renderMenu();
+      if (cart.size === 0) showScreen("menuScreen");
+    }
+
+    let currentUserId = "";
+
+    function finishLogin(user) {
+      currentUserId = user.id;
+      document.getElementById("userChip").textContent = `${user.id} · ${money(Number(user.balance || 0))}`;
+      document.getElementById("userChip").classList.add("visible");
+      document.getElementById("logout").classList.add("visible");
+      updateWalletBalance(Number(user.balance || 0));
+      renderMenu();
+      renderCartSummary();
+      showScreen("menuScreen");
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const studentId = document.getElementById("studentId").value.trim();
+      const password = document.getElementById("password").value;
+      if (!studentId || !password) {
+        notify("Enter both your student ID and password to continue.");
+        if (!studentId) document.getElementById("studentId").focus();
+        else document.getElementById("password").focus();
+        return;
+      }
+      const submit = event.currentTarget.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: studentId, password })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not sign in.");
+        if (!result.user || result.user.role !== "student") {
+          await fetch("/api/auth/logout", { method: "POST" });
+          throw new Error("Use a student account to sign in here.");
+        }
+        finishLogin(result.user);
+      } catch (error) {
+        notify(error instanceof TypeError ? "Could not reach the cafeteria server. Try again." : error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("logout").addEventListener("click", async () => {
+      try {
+        await fetch("/api/auth/logout", { method: "POST" });
+      } catch (error) {
+        console.error("Could not sign out from the cafeteria server:", error);
+      }
+      currentUserId = "";
+      walletBalance = 0;
+      cart.clear();
+      currentOrderId = "";
+      document.getElementById("userChip").classList.remove("visible");
+      document.getElementById("logout").classList.remove("visible");
+      document.getElementById("loginForm").reset();
+      renderCartSummary();
+      showScreen("loginScreen");
+    });
+
+    document.getElementById("passwordForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const response = await fetch("/api/auth/password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentPassword: form.elements.currentPassword.value,
+            newPassword: form.elements.newPassword.value
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not change password.");
+        form.reset();
+        notify("Your password has been updated.");
+      } catch (error) {
+        notify(error instanceof TypeError ? "Could not reach the cafeteria server. Try again." : error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("togglePassword").addEventListener("click", event => {
+      const password = document.getElementById("password");
+      const button = event.currentTarget;
+      const showing = password.type === "password";
+      password.type = showing ? "text" : "password";
+      button.textContent = showing ? "Hide" : "Show";
+      button.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+      button.setAttribute("aria-pressed", String(showing));
+    });
+
+    document.querySelector(".category-tabs").addEventListener("click", event => {
+      const tab = event.target.closest("[data-category]");
+      if (!tab) return;
+      selectedCategory = tab.dataset.category;
+      document.querySelectorAll(".category-tab").forEach(button => {
+        const active = button === tab;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      renderMenu();
+    });
+
+    document.querySelectorAll("[data-go]").forEach(button => {
+      button.addEventListener("click", () => showScreen(button.dataset.go));
+    });
+
+    document.getElementById("openCart").addEventListener("click", () => {
+      if (cart.size === 0) return;
+      renderCart();
+      showScreen("cartScreen");
+    });
+    document.getElementById("backToMenu").addEventListener("click", () => showScreen("menuScreen"));
+
+    document.getElementById("placeOrder").addEventListener("click", async event => {
+      if (cart.size === 0) {
+        notify("Add at least one item before placing your order.");
+        return;
+      }
+      const button = event.currentTarget;
+      const label = document.getElementById("placeOrderLabel");
+      const originalLabel = label.textContent;
+      button.disabled = true;
+      label.textContent = "Submitting order…";
+      try {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            canteen: orderCanteen,
+            items: Array.from(cart.values(), ({ item, quantity }) => ({ id: item.id, quantity })),
+            specialRequest: document.getElementById("request").value.trim()
+          })
+        });
+        const responseText = await response.text();
+        let order;
+        try {
+          order = JSON.parse(responseText);
+        } catch {
+          if (response.status === 403) {
+            throw new Error("The server or hosting service blocked this order request (HTTP 403 Forbidden). Open the student portal from the running cafeteria server and try again.");
+          }
+          throw new Error(`The order service returned an unexpected response (HTTP ${response.status}) instead of JSON. Your cart is still here.`);
+        }
+        if (response.status === 402 && typeof order.balance === "number") updateWalletBalance(order.balance);
+        if (!response.ok) throw new Error(order.error || "The server could not save your order.");
+        if (!order.id || !order.orderNumber || order.canteen !== orderCanteen ||
+            order.paymentMethod !== "Campus credit" || order.paymentStatus !== "paid" ||
+            order.status !== "New" || typeof order.balance !== "number") {
+          throw new Error("The server returned an invalid order confirmation.");
+        }
+
+        document.getElementById("orderNumber").textContent = order.orderNumber;
+        document.getElementById("confirmedCanteen").textContent = order.canteen;
+        currentOrderId = order.id;
+        updateOrderProgress(order.status);
+        updateWalletBalance(order.balance);
+        cart.clear();
+        renderCartSummary();
+        renderMenu();
+        showScreen("confirmationScreen");
+      } catch (error) {
+        console.error("Order submission failed:", error);
+        notify(error instanceof TypeError
+          ? "Could not reach the cafeteria server. Your cart is still here; please try again."
+          : error.message);
+      } finally {
+        button.disabled = false;
+        label.textContent = originalLabel;
+      }
+    });
+
+    function updateOrderProgress(status) {
+      const rows = Array.from(document.querySelectorAll(".order-status .status-row"));
+      const statusIndex = {
+        "New": 0,
+        "Preparing": 1,
+        "Ready": 2,
+        "Completed": 2,
+        "Cancelled": 0
+      }[status];
+      if (statusIndex === undefined) return;
+      rows.forEach((row, index) => {
+        row.classList.toggle("active", index <= statusIndex);
+        row.querySelector("span:last-child").textContent = status === "Cancelled" && index === 0
+          ? "Cancelled · credit refunded"
+          : status === "Completed" && index === 2
+            ? "Picked up"
+          : index === 0 && status === "New"
+            ? "Paid · order received"
+            : orderStatusLabels[index];
+      });
+    }
+
+    document.getElementById("trackOrder").addEventListener("click", async () => {
+      if (!currentOrderId) {
+        notify("No order is selected to track.");
+        return;
+      }
+      try {
+        const response = await fetch("/api/orders", { cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `Could not refresh order status (HTTP ${response.status}).`);
+        const order = result.find(entry => entry.id === currentOrderId);
+        if (!order) throw new Error("This order could not be found on the server.");
+        updateOrderProgress(order.status);
+        notify(order.status === "Completed" ? "Your order has been picked up." : `Current order status: ${order.status}.`);
+      } catch (error) {
+        notify(error instanceof TypeError
+          ? "Could not reach the cafeteria server to refresh this order."
+          : error.message);
+      }
+    });
+
+    document.getElementById("newOrder").addEventListener("click", () => {
+      document.getElementById("request").value = "";
+      document.querySelectorAll(".order-status .status-row").forEach((row, index) => row.classList.toggle("active", index === 0));
+      currentOrderId = "";
+      showScreen("menuScreen");
+    });
+
+    renderMenu();
+    renderCartSummary();
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then(result => {
+        if (result && result.user && result.user.role === "student") finishLogin(result.user);
+      })
+      .catch(error => console.error("Could not restore cafeteria student session:", error));
+  </script>
+</body>
+</html>
