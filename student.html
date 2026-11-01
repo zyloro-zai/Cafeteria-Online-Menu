@@ -195,6 +195,7 @@
       background: white;
     }
     .account-settings summary { color: var(--blue); font-size: 12px; font-weight: 800; cursor: pointer; }
+    .order-history .cart-row { grid-template-columns: minmax(0, 1fr); margin-top: 10px; }
     .progress { display: flex; align-items: center; gap: 6px; margin-bottom: 23px; }
     .progress span { height: 4px; flex: 1; border-radius: 9px; background: #e7edf4; }
     .progress span.done { background: var(--blue); }
@@ -462,7 +463,18 @@
             <button class="primary" type="submit">Log in</button>
           </div>
         </form>
-        <div class="privacy-note">Your wallet is debited when you place an order. Ask cafeteria staff to create your account.</div>
+        <details class="account-settings">
+          <summary>Create a student account</summary>
+          <form id="registerForm">
+            <label class="field-label" for="registerStudentId">Student ID</label>
+            <input class="field" id="registerStudentId" name="studentId" maxlength="32" autocomplete="username" required />
+            <label class="field-label" for="registerPassword">Password</label>
+            <input class="field" id="registerPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+            <p class="helper">Use a 12-128 character password. Your new account starts with zero demo credit. Student IDs are not verified; demo use only.</p>
+            <button class="secondary" type="submit">Create student account</button>
+          </form>
+        </details>
+        <div class="privacy-note">This demo uses test campus credit only. Online payments are not enabled.</div>
         <p class="screen-footer">Student ordering portal · Mobile-friendly demo</p>
       </section>
 
@@ -485,6 +497,11 @@
           <button class="category-tab" type="button" role="tab" aria-selected="false" data-category="snacks">Snacks</button>
           <button class="category-tab" type="button" role="tab" aria-selected="false" data-category="dessert">Dessert</button>
         </div>
+        <details class="account-settings order-history" id="orderHistoryPanel">
+          <summary>My orders and digital tickets</summary>
+          <button class="secondary" id="refreshOrderHistory" type="button">Refresh order history</button>
+          <div id="orderHistory" aria-live="polite">Loading orders…</div>
+        </details>
         <div class="food-list" id="foodList" aria-live="polite"></div>
         <details class="account-settings">
           <summary>Change account password</summary>
@@ -519,8 +536,14 @@
         </div>
         <label class="field-label" for="request">Special request <span style="color:#8795a7;font-weight:400;">(optional)</span></label>
         <textarea class="field request-field" id="request" maxlength="160" placeholder="Add a note for the canteen"></textarea>
-        <div class="current-canteen" id="walletBalance">Campus credit available: ₱0.00 · This order is charged when placed.</div>
+        <label class="field-label" for="pickupTime">Requested pickup time <span style="color:#8795a7;font-weight:400;">(optional)</span></label>
+        <input class="field" id="pickupTime" type="datetime-local" />
+        <p class="helper">Choose a time 5 minutes to 24 hours from now. The canteen will confirm availability.</p>
+        <div class="current-canteen" id="walletBalance">Campus credit available: ₱0.00</div>
+        <p class="helper">Demo prices are ₱20 or less per menu item. A 5% service fee is added to the order.</p>
         <button class="primary place-order" id="placeOrder" type="button"><span id="placeOrderLabel">Pay and place order</span> · <span id="placeOrderTotal">₱0.00</span></button>
+        <p class="helper">Or create a test order to pay by tapping your linked RFID card at the cafeteria reader. RFID UID cards can be copied; demo use only.</p>
+        <button class="secondary place-order" id="rfidOrder" type="button"><span id="rfidOrderLabel">Create order · pay at RFID reader</span></button>
         <button class="text-action" type="button" id="backToMenu">Add more food</button>
       </section>
 
@@ -531,7 +554,7 @@
         <div class="confirmation">
           <div class="checkmark" aria-hidden="true">✓</div>
           <h1 id="confirmationTitle">Payment received!</h1>
-          <p>Your paid order has been sent to <strong id="confirmedCanteen">Campus Canteen</strong>. Keep this number for pickup.</p>
+          <p id="confirmationMessage">Your paid order has been sent to Campus Canteen. Keep this number for pickup.</p>
           <div class="order-number"><small>Order number</small><strong id="orderNumber">—</strong></div>
           <div class="order-status">
             <div class="status-row active"><span class="status-dot"></span><span>Paid · order received</span></div>
@@ -556,24 +579,25 @@
 
   <script>
     const menuItems = [
-      { id: 1, name: "Chicken Adobo + Rice", price: 55, category: "meal", image: "🍗", description: "Slow-cooked adobo with steamed rice" },
-      { id: 2, name: "Beef Broccoli Bowl", price: 60, category: "meal", image: "🥘", description: "Tender beef, broccoli and rice" },
-      { id: 3, name: "Pork BBQ + Rice", price: 50, category: "meal", image: "🍢", description: "Grilled barbecue with rice" },
-      { id: 4, name: "Spaghetti", price: 45, category: "meal", image: "🍝", description: "Filipino-style sweet tomato sauce" },
-      { id: 5, name: "Iced Coffee", price: 25, category: "drinks", image: "🧋", description: "Freshly brewed and served cold" },
-      { id: 6, name: "Milk Tea", price: 30, category: "drinks", image: "🥤", description: "Creamy milk tea with pearls" },
-      { id: 7, name: "Fruit Shake", price: 35, category: "drinks", image: "🍹", description: "Fresh blended seasonal fruit" },
-      { id: 8, name: "Fresh Lemonade", price: 20, category: "drinks", image: "🍋", description: "Cool, freshly squeezed lemonade" },
-      { id: 9, name: "Cheeseburger", price: 40, category: "snacks", image: "🍔", description: "Beef patty, cheese and fresh lettuce" },
-      { id: 10, name: "French Fries", price: 28, category: "snacks", image: "🍟", description: "Crispy golden fries" },
-      { id: 11, name: "Pancakes", price: 32, category: "dessert", image: "🥞", description: "Fluffy pancakes with syrup" },
-      { id: 12, name: "Fruit Parfait", price: 38, category: "dessert", image: "🍨", description: "Yogurt, fruit and crunchy granola" }
+      { id: 1, name: "Chicken Adobo + Rice", price: 20, category: "meal", image: "🍗", description: "Slow-cooked adobo with steamed rice" },
+      { id: 2, name: "Beef Broccoli Bowl", price: 20, category: "meal", image: "🥘", description: "Tender beef, broccoli and rice" },
+      { id: 3, name: "Pork BBQ + Rice", price: 18, category: "meal", image: "🍢", description: "Grilled barbecue with rice" },
+      { id: 4, name: "Spaghetti", price: 18, category: "meal", image: "🍝", description: "Filipino-style sweet tomato sauce" },
+      { id: 5, name: "Iced Coffee", price: 15, category: "drinks", image: "🧋", description: "Freshly brewed and served cold" },
+      { id: 6, name: "Milk Tea", price: 18, category: "drinks", image: "🥤", description: "Creamy milk tea with pearls" },
+      { id: 7, name: "Fruit Shake", price: 20, category: "drinks", image: "🍹", description: "Fresh blended seasonal fruit" },
+      { id: 8, name: "Fresh Lemonade", price: 12, category: "drinks", image: "🍋", description: "Cool, freshly squeezed lemonade" },
+      { id: 9, name: "Cheeseburger", price: 20, category: "snacks", image: "🍔", description: "Beef patty, cheese and fresh lettuce" },
+      { id: 10, name: "French Fries", price: 15, category: "snacks", image: "🍟", description: "Crispy golden fries" },
+      { id: 11, name: "Pancakes", price: 18, category: "dessert", image: "🥞", description: "Fluffy pancakes with syrup" },
+      { id: 12, name: "Fruit Parfait", price: 20, category: "dessert", image: "🍨", description: "Yogurt, fruit and crunchy granola" }
     ];
     const cart = new Map();
     const orderStatusLabels = ["Order received", "Being prepared", "Ready for pickup"];
     const orderCanteen = "Campus Canteen";
     let selectedCategory = "all";
     let currentOrderId = "";
+    let orderHistoryTimer;
     let walletBalance = 0;
     let toastTimeout;
 
@@ -604,7 +628,7 @@
 
     function updateWalletBalance(balance) {
       walletBalance = Number(balance);
-      document.getElementById("walletBalance").textContent = `Campus credit available: ${money(walletBalance)} · This order is charged when placed.`;
+      document.getElementById("walletBalance").textContent = `Campus credit available: ${money(walletBalance)}`;
       if (document.getElementById("userChip").classList.contains("visible")) {
         document.getElementById("userChip").textContent = `${currentUserId} · ${money(walletBalance)}`;
       }
@@ -732,6 +756,84 @@
       renderMenu();
       renderCartSummary();
       showScreen("menuScreen");
+      refreshOrderHistory();
+      window.clearInterval(orderHistoryTimer);
+      orderHistoryTimer = window.setInterval(refreshOrderHistory, 15000);
+    }
+
+    function handleExpiredStudentSession() {
+      window.clearInterval(orderHistoryTimer);
+      currentUserId = "";
+      walletBalance = 0;
+      currentOrderId = "";
+      cart.clear();
+      document.getElementById("userChip").classList.remove("visible");
+      document.getElementById("logout").classList.remove("visible");
+      document.getElementById("orderHistory").textContent = "Sign in to view your orders.";
+      renderCartSummary();
+      showScreen("loginScreen");
+      notify("Your sign-in expired. Please sign in again to view and track orders.");
+    }
+
+    async function refreshOrderHistory() {
+      const list = document.getElementById("orderHistory");
+      if (!currentUserId) {
+        list.textContent = "Sign in to view your orders.";
+        return;
+      }
+      try {
+        const response = await fetch("/api/orders?role=student", { cache: "no-store" });
+        if (response.status === 401) {
+          handleExpiredStudentSession();
+          return;
+        }
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `Could not load orders (HTTP ${response.status}).`);
+        if (!Array.isArray(result)) throw new Error("The server returned invalid order history.");
+        list.replaceChildren();
+        if (!result.length) {
+          list.textContent = "You have no orders yet.";
+          return;
+        }
+        result.forEach(order => {
+          const entry = document.createElement("article");
+          entry.className = "cart-row";
+          const detail = document.createElement("div");
+          const number = document.createElement("strong");
+          number.textContent = `${order.orderNumber} · ${order.status}`;
+          const metadata = document.createElement("small");
+          const created = new Date(order.createdAt).toLocaleString();
+          const pickup = order.pickupTime ? ` · Pickup requested: ${new Date(order.pickupTime).toLocaleString()}` : "";
+          metadata.textContent = `${created} · ₱${Number(order.total).toFixed(2)}${pickup}`;
+          const ticket = document.createElement("button");
+          ticket.type = "button";
+          ticket.className = "secondary";
+          ticket.textContent = "View digital ticket";
+          ticket.addEventListener("click", () => showOrderTicket(order));
+          detail.append(number, metadata);
+          entry.append(detail, ticket);
+          list.appendChild(entry);
+        });
+      } catch (error) {
+        list.textContent = error.message;
+      }
+    }
+
+    function showOrderTicket(order) {
+      currentOrderId = order.id;
+      document.getElementById("orderNumber").textContent = order.orderNumber;
+      const unpaid = order.paymentStatus !== "paid";
+      document.getElementById("confirmationTitle").textContent = order.status === "Cancelled"
+        ? "Order cancelled"
+        : unpaid ? "Order waiting for RFID payment" : "Digital order ticket";
+      const pickup = order.pickupTime ? ` Requested pickup: ${new Date(order.pickupTime).toLocaleString()}.` : "";
+      document.getElementById("confirmationMessage").textContent = order.status === "Cancelled"
+        ? "The order was cancelled and its campus credit was refunded."
+        : unpaid
+          ? `Tap your linked card on the cafeteria reader to pay.${pickup}`
+          : `Show this order number at the canteen counter.${pickup}`;
+      updateOrderProgress(order.status);
+      showScreen("confirmationScreen");
     }
 
     document.getElementById("loginForm").addEventListener("submit", async event => {
@@ -755,7 +857,7 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Could not sign in.");
         if (!result.user || result.user.role !== "student") {
-          await fetch("/api/auth/logout", { method: "POST" });
+          await fetch("/api/auth/logout?role=student", { method: "POST" });
           throw new Error("Use a student account to sign in here.");
         }
         finishLogin(result.user);
@@ -766,9 +868,37 @@
       }
     });
 
-    document.getElementById("logout").addEventListener("click", async () => {
+    document.getElementById("registerForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
       try {
-        await fetch("/api/auth/logout", { method: "POST" });
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentId: form.elements.studentId.value.trim(),
+            password: form.elements.password.value
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not create student account.");
+        form.reset();
+        document.getElementById("studentId").value = result.student.id;
+        document.getElementById("password").focus();
+        notify("Student account created with zero demo credit. Sign in to continue.");
+      } catch (error) {
+        notify(error instanceof TypeError ? "Could not reach the cafeteria server. Try again." : error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("logout").addEventListener("click", async () => {
+      window.clearInterval(orderHistoryTimer);
+      try {
+        await fetch("/api/auth/logout?role=student", { method: "POST" });
       } catch (error) {
         console.error("Could not sign out from the cafeteria server:", error);
       }
@@ -779,6 +909,7 @@
       document.getElementById("userChip").classList.remove("visible");
       document.getElementById("logout").classList.remove("visible");
       document.getElementById("loginForm").reset();
+      document.getElementById("orderHistory").textContent = "Sign in to view your orders.";
       renderCartSummary();
       showScreen("loginScreen");
     });
@@ -789,7 +920,7 @@
       const submit = form.querySelector('button[type="submit"]');
       submit.disabled = true;
       try {
-        const response = await fetch("/api/auth/password", {
+        const response = await fetch("/api/auth/password?role=student", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -837,19 +968,30 @@
     document.getElementById("openCart").addEventListener("click", () => {
       if (cart.size === 0) return;
       renderCart();
+      const pickupInput = document.getElementById("pickupTime");
+      const now = new Date();
+      pickupInput.min = formatLocalDateTime(new Date(now.getTime() + 6 * 60 * 1000));
+      pickupInput.max = formatLocalDateTime(new Date(now.getTime() + 24 * 60 * 60 * 1000));
       showScreen("cartScreen");
     });
     document.getElementById("backToMenu").addEventListener("click", () => showScreen("menuScreen"));
+    document.getElementById("refreshOrderHistory").addEventListener("click", refreshOrderHistory);
 
-    document.getElementById("placeOrder").addEventListener("click", async event => {
+    function formatLocalDateTime(date) {
+      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+      return localDate.toISOString().slice(0, 16);
+    }
+
+    async function submitOrder(event, paymentMode) {
       if (cart.size === 0) {
         notify("Add at least one item before placing your order.");
         return;
       }
       const button = event.currentTarget;
-      const label = document.getElementById("placeOrderLabel");
+      const label = document.getElementById(paymentMode === "rfid" ? "rfidOrderLabel" : "placeOrderLabel");
       const originalLabel = label.textContent;
       button.disabled = true;
+      document.getElementById(paymentMode === "rfid" ? "placeOrder" : "rfidOrder").disabled = true;
       label.textContent = "Submitting order…";
       try {
         const response = await fetch("/api/orders", {
@@ -858,7 +1000,11 @@
           body: JSON.stringify({
             canteen: orderCanteen,
             items: Array.from(cart.values(), ({ item, quantity }) => ({ id: item.id, quantity })),
-            specialRequest: document.getElementById("request").value.trim()
+            specialRequest: document.getElementById("request").value.trim(),
+            pickupTime: document.getElementById("pickupTime").value
+              ? new Date(document.getElementById("pickupTime").value).toISOString()
+              : null,
+            paymentMode
           })
         });
         const responseText = await response.text();
@@ -873,18 +1019,25 @@
         }
         if (response.status === 402 && typeof order.balance === "number") updateWalletBalance(order.balance);
         if (!response.ok) throw new Error(order.error || "The server could not save your order.");
+        const validPayment = paymentMode === "rfid"
+          ? order.paymentMethod === "RFID campus credit" && order.paymentStatus === "awaiting_payment" && order.status === "Awaiting payment"
+          : order.paymentMethod === "Campus credit" && order.paymentStatus === "paid" && order.status === "New";
         if (!order.id || !order.orderNumber || order.canteen !== orderCanteen ||
-            order.paymentMethod !== "Campus credit" || order.paymentStatus !== "paid" ||
-            order.status !== "New" || typeof order.balance !== "number") {
+            !validPayment || typeof order.balance !== "number") {
           throw new Error("The server returned an invalid order confirmation.");
         }
 
         document.getElementById("orderNumber").textContent = order.orderNumber;
-        document.getElementById("confirmedCanteen").textContent = order.canteen;
+        document.getElementById("confirmationTitle").textContent =
+          paymentMode === "rfid" ? "Order waiting for RFID payment" : "Payment received!";
+        document.getElementById("confirmationMessage").textContent = paymentMode === "rfid"
+          ? "Tap your linked card on the cafeteria reader to pay. Staff will start preparing the order after payment."
+          : "Your paid order has been sent to Campus Canteen. Keep this number for pickup.";
         currentOrderId = order.id;
         updateOrderProgress(order.status);
         updateWalletBalance(order.balance);
         cart.clear();
+        refreshOrderHistory();
         renderCartSummary();
         renderMenu();
         showScreen("confirmationScreen");
@@ -895,13 +1048,18 @@
           : error.message);
       } finally {
         button.disabled = false;
+        document.getElementById(paymentMode === "rfid" ? "placeOrder" : "rfidOrder").disabled = false;
         label.textContent = originalLabel;
       }
-    });
+    }
+
+    document.getElementById("placeOrder").addEventListener("click", event => submitOrder(event, "wallet"));
+    document.getElementById("rfidOrder").addEventListener("click", event => submitOrder(event, "rfid"));
 
     function updateOrderProgress(status) {
       const rows = Array.from(document.querySelectorAll(".order-status .status-row"));
       const statusIndex = {
+        "Awaiting payment": 0,
         "New": 0,
         "Preparing": 1,
         "Ready": 2,
@@ -913,6 +1071,8 @@
         row.classList.toggle("active", index <= statusIndex);
         row.querySelector("span:last-child").textContent = status === "Cancelled" && index === 0
           ? "Cancelled · credit refunded"
+          : status === "Awaiting payment" && index === 0
+            ? "Awaiting RFID payment · tap linked card"
           : status === "Completed" && index === 2
             ? "Picked up"
           : index === 0 && status === "New"
@@ -927,12 +1087,30 @@
         return;
       }
       try {
-        const response = await fetch("/api/orders", { cache: "no-store" });
+        const response = await fetch("/api/orders?role=student", { cache: "no-store" });
+        if (response.status === 401) {
+          handleExpiredStudentSession();
+          return;
+        }
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `Could not refresh order status (HTTP ${response.status}).`);
         const order = result.find(entry => entry.id === currentOrderId);
         if (!order) throw new Error("This order could not be found on the server.");
         updateOrderProgress(order.status);
+        document.getElementById("confirmationTitle").textContent = order.status === "Cancelled"
+          ? "Order cancelled"
+          : order.paymentStatus === "paid" ? "Payment received!" : "Order waiting for RFID payment";
+        const pickup = order.pickupTime ? ` Requested pickup: ${new Date(order.pickupTime).toLocaleString()}.` : "";
+        document.getElementById("confirmationMessage").textContent = order.status === "Cancelled"
+          ? "The order was cancelled and its campus credit was refunded."
+          : order.paymentStatus === "paid"
+            ? `Your paid order has been sent to Campus Canteen. Keep this number for pickup.${pickup}`
+            : `Tap your linked card on the cafeteria reader to pay. Staff will start preparing the order after payment.${pickup}`;
+        const accountResponse = await fetch("/api/auth/me?role=student", { cache: "no-store" });
+        if (accountResponse.ok) {
+          const account = await accountResponse.json();
+          if (account.user && typeof account.user.balance === "number") updateWalletBalance(account.user.balance);
+        }
         notify(order.status === "Completed" ? "Your order has been picked up." : `Current order status: ${order.status}.`);
       } catch (error) {
         notify(error instanceof TypeError
@@ -943,6 +1121,7 @@
 
     document.getElementById("newOrder").addEventListener("click", () => {
       document.getElementById("request").value = "";
+      document.getElementById("pickupTime").value = "";
       document.querySelectorAll(".order-status .status-row").forEach((row, index) => row.classList.toggle("active", index === 0));
       currentOrderId = "";
       showScreen("menuScreen");
@@ -950,7 +1129,7 @@
 
     renderMenu();
     renderCartSummary();
-    fetch("/api/auth/me", { cache: "no-store" })
+    fetch("/api/auth/me?role=student", { cache: "no-store" })
       .then(response => response.ok ? response.json() : null)
       .then(result => {
         if (result && result.user && result.user.role === "student") finishLogin(result.user);
