@@ -5,17 +5,17 @@
 The student and staff websites are served by the same Node.js server. Do not open `server.js` in a browser or double-click it; open the project folder in VS Code and start it from the VS Code terminal.
 
 1. Install [Node.js](https://nodejs.org/) if it is not already installed.
-2. In VS Code, choose **File → Open Folder…** and open the folder containing `server.js`, `student.html`, `staff.html`, and `package.json`. In this project, that folder is:
+2. In VS Code, choose **File → Open Folder…** and open the folder containing `server.js`, `student.html`, `staff.html`, and `package.json`. In this checkout, that folder is:
 
    ```text
-   C:\Users\lacmi\OneDrive\Documents
+C:\Users\lacmi\OneDrive\Documents\CAFONLMN
    ```
 
    In the Explorer pane, you should be able to see `server.js` and `package.json` at the top level.
 3. Open **Terminal → New Terminal** in VS Code. Make sure the terminal is in that project folder. If it is not, run:
 
    ```powershell
-   cd "C:\Users\lacmi\OneDrive\Documents"
+   cd "C:\Users\lacmi\OneDrive\Documents\CAFONLMN"
    ```
 
 4. If this is the first run, install the project dependencies once:
@@ -38,7 +38,7 @@ The student and staff websites are served by the same Node.js server. Do not ope
    - Student website: `http://localhost:3000/`
    - Staff website: `http://localhost:3000/staff.html`
 
-   Sign in to the staff website using the staff ID and password configured above. Staff can then create student accounts and add credit after verifying that the school received the funds.
+   Sign in to the staff website using the staff ID and password configured above. Students can create zero-balance demo accounts from the student sign-in page. Staff applicants can request an account from the staff sign-in page; an existing staff member must verify the applicant in person and approve the request before it can sign in. Staff can also create student accounts directly and add clearly labeled test credits.
 7. To stop the server, return to its terminal and press **Ctrl+C**. Start it again with `npm start` when you need the sites again. The first staff account is created only if its ID does not already exist; setting the bootstrap environment variables later does not reset an existing account's password.
 
 ### Open the sites on other devices on the same Wi-Fi
@@ -59,7 +59,18 @@ This same-Wi-Fi setup is **local network access, not a public internet website**
 
 ### Where wallet data is saved
 
-By default, local accounts, wallet balances, transaction records, and orders are saved in `server-data.json` in the project folder. Keep the server running on the same computer and back up this file securely. Do not email it, commit it to a public repository, or edit it while the server is running. If `DATABASE_URL` is configured, the server uses PostgreSQL instead. Local JSON storage is for a single server process; it is not suitable for several server instances sharing real balances.
+By default, local accounts, pending staff requests, wallet balances, transaction records, and orders are saved in `server-data.json` in the project folder. Keep the server running on the same computer and back up this file securely. Do not email it, commit it to a public repository, or edit it while the server is running. If `DATABASE_URL` is configured, the server uses PostgreSQL instead. Local JSON storage is for a single server process; it is not suitable for several server instances sharing real balances.
+
+The staff and student portals keep separate sign-in sessions, so using both portals in the same browser does not replace one role's session with the other. If a staff action says you do not have permission, sign out of the staff portal and back in with an approved staff account; a student login cannot perform staff actions.
+
+### Ordering and payment demo limits
+
+- Every menu item is priced at ₱20 or less. The 5% service fee is added to the order total, so the total can exceed ₱20 when ordering multiple items.
+- Students can request a pickup time 5 minutes to 24 hours ahead. Staff see the requested time in the order queue; it is a request, not a guaranteed or automatically confirmed slot.
+- Order numbers are digital tickets shown after checkout and saved in the student's **My orders and digital tickets** history. No physical printer/ticket is required.
+- Student self-registration creates an account with zero demo credit. Staff applications stay pending until an existing staff member verifies the applicant and approves or rejects the request. Staff registration requests store a password hash, not the submitted password.
+- Student self-registration does not verify school identity. Do not use it as-is for real student accounts or funds; a real deployment needs an approved identity-verification process.
+- This project does not process online purchases, card payments, or e-wallet payments. Staff-added balances are test credits only for this demo; do not enter real payment details or use real funds. Before adding an online payment provider, use its sandbox and verified payment callbacks rather than trusting a browser-reported payment.
 
 ### Before using real balances
 
@@ -67,25 +78,27 @@ For local UI testing, use test accounts and test balances only. **Do not use rea
 
 Before handling real school funds, get school approval, verify student identities, use trusted HTTPS for all devices, secure and back up persistent database storage, and agree on procedures for top-ups, disputes, and refunds. To enable HTTPS directly, configure both `TLS_CERT_FILE` and `TLS_KEY_FILE` before starting Node; alternatively, deploy behind an HTTPS proxy and set `NODE_ENV=production` so session cookies are marked Secure. Devices must trust the HTTPS certificate.
 
-The wallet uses prepaid credit that staff record only after verifying that funds were received through the school's approved process. It does not take card/e-wallet payments and is not a bank or regulated e-money wallet. Order totals are deducted immediately; staff can cancel and refund a paid order only while its status is still `New`.
+The demo wallet uses test credits that staff add manually; it does not take card/e-wallet payments and is not a bank or regulated e-money wallet. For any future real-fund use, credit must be added only after an approved payment provider confirms payment. Order totals are deducted immediately; staff can cancel and refund a paid order only while its status is still `New`.
 
 Local JSON storage is intended for one server process. For a shared deployment, configure a properly managed PostgreSQL database with `DATABASE_URL`.
 
-## ESP32 RFID and microSD prototype
+## ESP32 RFID demo (microSD optional)
 
-The sketch at `Arduino/sketch_sep2a/sketch_sep2a.ino` is for a common ESP32 DevKit board, an MFRC522/RC522 13.56 MHz RFID reader, and an SPI microSD module. It connects to Wi-Fi if configured, prints the ESP32's local IP, reads card UIDs, and appends them to `/rfid_scans.csv` on the SD card. It does **not** connect scans to student accounts, contact the cafeteria server, charge campus credit, or confirm order pickup. Treat card UIDs and the SD log as sensitive identifiers.
+The [sketch_sep.ino](./sketch_sep.ino) sketch works with an ESP32 DevKit board and an MFRC522/RC522 13.56 MHz RFID reader. A microSD module is optional: without one, the reader still sends scans to this app over Wi-Fi, but it does not save a local CSV log. With a working microSD module installed, scans are also appended to `/rfid_scans.csv`. Staff can link a card to a student, a scan can pay one pending test order from that student's campus-credit balance, and staff can scan to look up that student's orders and confirm pickup in the staff portal.
+
+**Demo use only.** Common card UIDs can be copied, and the ESP32 demo uses plain HTTP on the local network. Do not use this as secure authentication or with real funds or sensitive accounts. Keep the server on a trusted private Wi-Fi network; do not expose port 3000 to the public internet.
 
 ### Arduino IDE setup
 
 1. Install the Arduino IDE and add the ESP32 board support package using **Boards Manager** (search for **esp32 by Espressif Systems**).
 2. In **Library Manager**, install **MFRC522 by GithubCommunity** (the miguelbalboa MFRC522 library).
-3. In the Arduino IDE, open `Arduino/sketch_sep2a/sketch_sep2a.ino` and select your exact ESP32 board under **Tools → Board**.
+3. In the Arduino IDE, open `sketch_sep.ino` and select your exact ESP32 board under **Tools → Board**.
 4. Edit `wifiName` and `wifiPassword` near the top of the sketch for the router the ESP32 will use. Keep real Wi-Fi credentials out of GitHub; if you switch computers or networks, enter that network's details locally.
-5. Format the microSD card as FAT32, disconnect power before wiring, then connect the modules according to the pin map below. Use jumper leads and a shared ground.
-6. Connect the ESP32 over USB, choose the correct serial port, and click **Upload**. Open **Tools → Serial Monitor** at **115200 baud** to see whether Wi-Fi, the SD module, and the RC522 initialized.
-7. Tap a compatible card/key fob. Its UID and ESP32 uptime are printed in Serial Monitor and appended to `rfid_scans.csv`. The uptime is milliseconds since boot, not a real date/time.
+5. Disconnect power before wiring. Connect the RC522 to the ESP32 according to the pin map below. You can omit the microSD module and its wires. If you have a working SD module, format its card as FAT32 and connect its separate CS wire as shown.
+6. Connect the ESP32 over USB, choose the correct serial port, and click **Upload**. Open **Tools → Serial Monitor** at **115200 baud** to check Wi-Fi, the RC522, and (if installed) microSD status.
+7. Tap a compatible card/key fob. Its UID is printed in Serial Monitor and sent to the server when Wi-Fi is connected. If a working microSD is installed, the UID and ESP32 uptime are also appended to `rfid_scans.csv`. The uptime is milliseconds since boot, not a real date/time.
 
-### Example SPI wiring (common ESP32 DevKit + RC522 + microSD SPI breakout)
+### Example SPI wiring (common ESP32 DevKit + RC522; optional microSD)
 
 | ESP32 pin | RC522 pin | microSD module pin |
 | --- | --- | --- |
@@ -100,4 +113,23 @@ The sketch at `Arduino/sketch_sep2a/sketch_sep2a.ino` is for a common ESP32 DevK
 
 The two modules share SPI clock/data, but each has its **own chip-select wire**. This example pinout is not universal: confirm the labels and voltage requirements for your exact ESP32, RFID reader, and SD breakout before connecting power. The RC522 uses 3.3 V logic; never feed 5 V signals into ESP32 or RC522 pins. Some SD breakouts include a regulator or level shifting and have different power input requirements. Do not connect a module's 5 V output to the ESP32's 3.3 V rail.
 
-The ESP32 and server computer can join the same router for local-network use; internet is not necessary for this scan logger. The current sketch only prints the ESP32's IP address and saves scans to SD. Do not treat an RFID UID as secure authentication or payment: common card UIDs can be copied, and this prototype does not tell the server who tapped or change an order's status. The earlier sketch contained Wi-Fi credentials; rotate that Wi-Fi password if that version was shared or committed, then use local, uncommitted settings for the new one.
+### Connect the reader to the local demo app
+
+1. Connect the server computer and ESP32 to the same trusted Wi-Fi. In PowerShell, run `ipconfig` and note the computer's Wi-Fi IPv4 address (for example, `192.168.1.25`).
+2. Stop any running server with **Ctrl+C**. In the VS Code terminal opened in the folder containing `server.js`, set a private device token, then start the server. Keep this token private and do not commit it:
+
+   ```powershell
+   $env:HOST = "0.0.0.0"
+   $env:BOOTSTRAP_STAFF_ID = "cafeteria-admin"
+   $env:BOOTSTRAP_STAFF_PASSWORD = "replace-this-with-a-private-12-character-or-longer-password"
+   $env:RFID_DEVICE_TOKEN = (node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+   $env:RFID_DEVICE_TOKEN
+   npm start
+   ```
+
+   Save the displayed token locally so you can enter the exact same value in the sketch. If the existing staff account is already set up, its password is not reset by these environment variables. Allow Node.js through Windows Firewall on **Private networks only** if prompted.
+3. In `sketch_sep.ino`, set `serverBaseUrl` to `http://<server-computer-IPv4-address>:3000` (for example, `http://192.168.1.25:3000`) and set `rfidDeviceToken` to the token from step 2. Configure the Wi-Fi name/password, upload the sketch, and open Serial Monitor at 115200 baud. Do not commit the edited sketch with Wi-Fi credentials or the token.
+4. Open `http://localhost:3000/staff.html` on the server computer and sign in. Create or choose a demo student account, enter the student's ID under **Link a demo RFID card**, start enrollment, then tap their card at the reader within two minutes.
+5. To test payment, add credit only to a demo student account and put `DEMO ONLY - NOT REAL FUNDS` in its reference. Create an order from that student's portal using **Create order · pay at RFID reader**, then tap the linked card. A successful scan deducts the order total once and moves the order to the staff queue. For pickup lookup, scan the card again; the staff portal filters to that student's orders, and staff confirms pickup using the order action.
+
+The microSD scan log contains card UIDs and should be handled as sensitive data. The reader does not authenticate a card cryptographically; the UID-to-student mapping and shared device token are for a local classroom demo only. Never use this prototype to authorize real payments.
