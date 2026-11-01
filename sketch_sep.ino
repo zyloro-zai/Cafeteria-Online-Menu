@@ -2,13 +2,15 @@
 #include <SPI.h>
 #include <SD.h>
 #include <MFRC522.h>
-
+#include <HTTPClient.h>
 const char* wifiName = "YOUR_WIFI_NAME";
 const char* wifiPassword = "YOUR_WIFI_PASSWORD";
+const char* serverBaseUrl = "http://192.168.1.25:3000";
+const char* rfidDeviceToken = "REPLACE_WITH_A_RANDOM_64_CHARACTER_TOKEN";
 
-// Pin map for a common ESP32 DevKit, RC522 reader, and SPI microSD module.
-constexpr uint8_t RFID_SS_PIN = 21;
-constexpr uint8_t RFID_RST_PIN = 22;
+// Pin map for a common ESP32 DevKit and RC522 reader. microSD is optional.
+constexpr uint8_t RFID_SS_PIN = 4;
+constexpr uint8_t RFID_RST_PIN = 21;
 constexpr uint8_t SD_CS_PIN = 27;
 constexpr uint8_t SPI_SCK_PIN = 18;
 constexpr uint8_t SPI_MISO_PIN = 19;
@@ -20,7 +22,7 @@ bool rfidReady = false;
 
 void connectToWiFi() {
   if (String(wifiName) == "YOUR_WIFI_NAME" || strlen(wifiName) == 0) {
-    Serial.println("Wi-Fi not configured. RFID scans will still be logged to the SD card.");
+    Serial.println("Wi-Fi not configured. RFID scans can still be read locally.");
     return;
   }
 
@@ -39,14 +41,15 @@ void connectToWiFi() {
     Serial.print("ESP32 IP address: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\nWi-Fi connection failed. Local RFID and SD logging will continue.");
+    Serial.println("\nWi-Fi connection failed. Local RFID reading will continue.");
   }
 }
 
 void initializeSdCard() {
   digitalWrite(SD_CS_PIN, HIGH);
   if (!SD.begin(SD_CS_PIN, SPI, 4000000)) {
-    Serial.println("ERROR: microSD initialization failed. Check the wiring, card format, and module voltage.");
+    sdReady = false;
+    Serial.println("microSD not available. Continuing without a local scan log.");
     return;
   }
 
@@ -55,7 +58,7 @@ void initializeSdCard() {
     File logFile = SD.open("/rfid_scans.csv", FILE_WRITE);
     if (!logFile) {
       sdReady = false;
-      Serial.println("ERROR: Could not create /rfid_scans.csv on the SD card.");
+      Serial.println("microSD log could not be created. Continuing without a local scan log.");
       return;
     }
     logFile.println("uptime_ms,card_uid");
@@ -79,7 +82,7 @@ String readCardUid() {
 
 void logCardScan(const String& uid) {
   if (!sdReady) {
-    Serial.println("WARNING: Scan was read but not saved because the SD card is unavailable.");
+    Serial.println("No microSD log; scan will still be sent to the cafeteria server when Wi-Fi is connected.");
     return;
   }
 
@@ -99,6 +102,35 @@ void logCardScan(const String& uid) {
   }
 
   Serial.println("Scan saved to SD.");
+}
+
+void sendCardScanToServer(const String& uid) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("RFID server unavailable: ESP32 is not connected to Wi-Fi.");
+    return;
+  }
+  if (String(rfidDeviceToken) == "REPLACE_WITH_A_RANDOM_64_CHARACTER_TOKEN" ||
+      strlen(rfidDeviceToken) < 32) {
+    Serial.println("RFID server unavailable: configure a private device token in the sketch.");
+    return;
+  }
+
+  HTTPClient client;
+  String endpoint = String(serverBaseUrl) + "/api/rfid/scan";
+  if (!client.begin(endpoint)) {
+    Serial.println("ERROR: Could not connect to the cafeteria server URL.");
+    return;
+  }
+  client.addHeader("Content-Type", "application/json");
+  client.addHeader("X-RFID-Token", rfidDeviceToken);
+  int status = client.POST("{\"uid\":\"" + uid + "\"}");
+  String response = client.getString();
+  client.end();
+
+  Serial.print("RFID server response (HTTP ");
+  Serial.print(status);
+  Serial.print("): ");
+  Serial.println(response);
 }
 
 void setup() {
@@ -124,7 +156,11 @@ void setup() {
     Serial.println("RC522 ready. Tap a compatible card or key fob.");
   }
 
-  Serial.println("This sketch only reads card UIDs and logs scans. It does not charge wallets or verify pickup.");
+  Serial.println(sdReady
+    ? "microSD logging enabled."
+    : "microSD logging disabled; server features do not require an SD card.");
+  Serial.println("Demo reader: linked cards can pay one pending test order or identify a student for staff order lookup.");
+  Serial.println("RFID UIDs can be copied. Do not use this prototype with real funds or as secure authentication.");
 }
 
 void loop() {
@@ -133,6 +169,7 @@ void loop() {
     Serial.print("Card UID: ");
     Serial.println(uid);
     logCardScan(uid);
+    sendCardScanToServer(uid);
 
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
