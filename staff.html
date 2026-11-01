@@ -194,6 +194,8 @@
       font-size: 11px;
       line-height: 1.45;
     }
+    .rfid-scan-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .rfid-scan-banner button { flex: 0 0 auto; border: 0; color: var(--blue); background: transparent; font-size: 11px; font-weight: 700; }
     .wallet-panel {
       padding: 15px;
       margin-bottom: 18px;
@@ -401,7 +403,19 @@
             <button class="primary" type="submit">Log in</button>
           </div>
         </form>
-        <div class="privacy-note">Credit changes are recorded with your staff ID. Add funds only after verifying that the school received them.</div>
+        <details class="staff-settings">
+          <summary>Request a staff account</summary>
+          <p class="helper">An existing staff member must verify your identity and approve the request before you can sign in.</p>
+          <form id="staffRequestForm">
+            <label class="field-label" for="staffRequestId">Staff ID</label>
+            <input class="field" id="staffRequestId" name="staffId" maxlength="32" autocomplete="username" required />
+            <label class="field-label" for="staffRequestPassword">Password</label>
+            <input class="field" id="staffRequestPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+            <p class="helper">Use a 12-128 character password. Your password is stored as a hash and is not shown to approvers.</p>
+            <button class="secondary wallet-submit" type="submit">Submit staff account request</button>
+          </form>
+        </details>
+        <div class="privacy-note">Staff access requires approval. Use demo credits only; online payments are not enabled.</div>
         <p class="screen-footer">Cafeteria staff portal · Mobile-friendly demo</p>
       </section>
 
@@ -417,9 +431,18 @@
           </div>
         </div>
         <div class="demo-banner" id="connectionStatus" role="status">Connecting to the order server…</div>
+        <div class="demo-banner rfid-scan-banner" id="rfidScanStatus" role="status" aria-live="polite" hidden>
+          <span id="rfidScanMessage"></span>
+          <button id="clearRfidScan" type="button">Show all orders</button>
+        </div>
+        <section class="wallet-panel" aria-labelledby="staffRequestsTitle">
+          <h2 id="staffRequestsTitle">Staff account requests</h2>
+          <p class="wallet-help">Verify each applicant in person before approving staff privileges. Never approve a request based only on its submitted ID.</p>
+          <div id="staffRequestList" aria-live="polite">Loading requests…</div>
+        </section>
         <section class="wallet-panel" aria-labelledby="walletTitle">
           <h2 id="walletTitle">Campus credit accounts</h2>
-          <p class="wallet-help">Create student accounts and add credit only after verifying funds were received through the school’s process.</p>
+          <p class="wallet-help">This demo has no online payment provider. Add clearly labeled test credits only; real funds require an approved provider and verification.</p>
           <form id="studentAccountForm">
             <h3>Create student account</h3>
             <label class="field-label" for="newStudentId">Student ID</label>
@@ -428,6 +451,15 @@
             <input class="field" id="newStudentPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
             <p class="helper">Use at least 12 characters and give the password directly to the student.</p>
             <button class="primary wallet-submit" type="submit">Create zero-balance account</button>
+          </form>
+          <form id="rfidEnrollForm">
+            <h3>Link a demo RFID card</h3>
+            <label class="field-label" for="rfidStudentId">Student ID</label>
+            <input class="field" id="rfidStudentId" name="studentId" maxlength="32" autocomplete="off" required />
+            <p class="helper">Start enrollment, then tap the student's card on the connected reader within 2 minutes. Card UIDs can be copied; use demo accounts only.</p>
+            <button class="primary wallet-submit" type="submit">Start card enrollment</button>
+            <button class="secondary wallet-submit" id="cancelRfidEnrollment" type="button">Cancel enrollment</button>
+            <button class="secondary wallet-submit" id="unlinkRfidCard" type="button">Unlink card from student</button>
           </form>
           <form id="staffAccountForm">
             <h3>Create staff account</h3>
@@ -439,14 +471,14 @@
             <button class="secondary wallet-submit" type="submit">Create staff account</button>
           </form>
           <form id="topupForm">
-            <h3>Record verified funds</h3>
+            <h3>Add test credit</h3>
             <label class="field-label" for="topupStudentId">Student ID</label>
             <input class="field" id="topupStudentId" name="studentId" maxlength="32" autocomplete="off" required />
-            <label class="field-label" for="topupAmount">Amount received (₱)</label>
+            <label class="field-label" for="topupAmount">Credit amount (₱)</label>
             <input class="field" id="topupAmount" name="amount" type="number" min="0.01" max="50000" step="0.01" required />
-            <label class="field-label" for="topupReference">Receipt / verification reference</label>
+            <label class="field-label" for="topupReference">Test reference</label>
             <input class="field" id="topupReference" name="reference" maxlength="100" autocomplete="off" required />
-            <button class="primary wallet-submit" type="submit">Add verified credit</button>
+            <button class="primary wallet-submit" type="submit">Add test credit</button>
           </form>
           <div class="wallet-ledger">
             <div class="section-heading"><h3>Recent wallet activity</h3><button class="icon-button" id="refreshWallet" type="button">Refresh</button></div>
@@ -491,8 +523,12 @@
   <script>
     let orders = [];
     let selectedFilter = "all";
+    let selectedRfidStudent = "";
     let refreshTimer;
+    let rfidRefreshTimer;
     let refreshInProgress = false;
+    let rfidRefreshInProgress = false;
+    let lastRfidScanEventId = 0;
     let toastTimeout;
 
     const screens = Array.from(document.querySelectorAll(".screen"));
@@ -516,6 +552,14 @@
       toastTimeout = window.setTimeout(() => { toast.hidden = true; }, 2600);
     }
 
+    function handleExpiredStaffSession() {
+      window.clearInterval(refreshTimer);
+      window.clearInterval(rfidRefreshTimer);
+      document.getElementById("loginForm").reset();
+      showScreen("loginScreen");
+      notify("Your staff sign-in expired. Please sign in again to load orders.");
+    }
+
     function renderStats(orders) {
       document.getElementById("newCount").textContent = String(orders.filter(order => order.status === "New" || order.status === "Awaiting payment").length);
       document.getElementById("preparingCount").textContent = String(orders.filter(order => order.status === "Preparing").length);
@@ -523,7 +567,12 @@
     }
 
     function renderOrders() {
-      const visibleOrders = selectedFilter === "all" ? orders : orders.filter(order => order.status === selectedFilter);
+      const studentOrders = selectedRfidStudent
+        ? orders.filter(order => order.studentId && order.studentId.toLowerCase() === selectedRfidStudent.toLowerCase())
+        : orders;
+      const visibleOrders = selectedFilter === "all"
+        ? studentOrders
+        : studentOrders.filter(order => order.status === selectedFilter);
       renderStats(orders);
       document.getElementById("orderCount").textContent = `${orders.length} ${orders.length === 1 ? "order" : "orders"}`;
 
@@ -532,7 +581,9 @@
       if (visibleOrders.length === 0) {
         const empty = document.createElement("div");
         empty.className = "empty-state";
-        empty.textContent = selectedFilter === "all"
+        empty.textContent = selectedRfidStudent
+          ? `No ${selectedFilter === "all" ? "" : `${selectedFilter.toLowerCase()} `}orders for student ${selectedRfidStudent}.`
+          : selectedFilter === "all"
           ? "No orders yet. New student orders will appear here automatically."
           : `No ${selectedFilter.toLowerCase()} orders right now.`;
         list.appendChild(empty);
@@ -576,14 +627,16 @@
         bottom.className = "order-card-bottom";
         const time = document.createElement("span");
         time.className = "order-time";
-        time.textContent = new Date(order.createdAt).toLocaleString();
+        time.textContent = `${new Date(order.createdAt).toLocaleString()}${order.pickupTime
+          ? ` · Pickup requested ${new Date(order.pickupTime).toLocaleString()}`
+          : ""}`;
         const total = document.createElement("span");
         total.className = "order-total";
         total.textContent = `₱${Number(order.total).toFixed(2)}`;
         const payment = document.createElement("span");
         payment.className = "order-time";
-        payment.textContent = order.paymentStatus === "paid" ? "Campus credit · Paid" :
-          order.paymentStatus === "awaiting_payment" ? "Legacy RFID order · payment pending" : "Legacy pay-at-pickup order";
+        payment.textContent = order.paymentStatus === "paid" ? `${order.paymentMethod || "Campus credit"} · Paid` :
+          order.paymentStatus === "awaiting_payment" ? "RFID campus credit · awaiting card scan" : "Legacy pay-at-pickup order";
         const summary = document.createElement("div");
         summary.className = "order-card-bottom";
         summary.append(time, total);
@@ -639,7 +692,11 @@
       if (refreshInProgress || !document.getElementById("dashboardScreen").classList.contains("active")) return;
       refreshInProgress = true;
       try {
-        const response = await fetch("/api/orders", { cache: "no-store" });
+        const response = await fetch("/api/orders?role=staff", { cache: "no-store" });
+        if (response.status === 401) {
+          handleExpiredStaffSession();
+          return;
+        }
         const body = await response.text();
         let result;
         try {
@@ -658,6 +715,64 @@
       } finally {
         refreshInProgress = false;
       }
+    }
+
+    async function refreshRfidScans() {
+      if (rfidRefreshInProgress || !document.getElementById("dashboardScreen").classList.contains("active")) return;
+      rfidRefreshInProgress = true;
+      try {
+        const result = await requestJson(`/api/rfid/scans?after=${lastRfidScanEventId}`, { cache: "no-store" });
+        if (!Array.isArray(result.events) || !Number.isSafeInteger(result.latestId)) {
+          throw new Error("RFID scan service returned invalid event data.");
+        }
+        if (result.latestId < lastRfidScanEventId) lastRfidScanEventId = 0;
+        result.events.forEach(event => {
+          lastRfidScanEventId = Math.max(lastRfidScanEventId, event.id);
+          const banner = document.getElementById("rfidScanStatus");
+          const message = document.getElementById("rfidScanMessage");
+          banner.hidden = false;
+          if (event.kind === "enrolled") {
+            message.textContent = `RFID card linked to student ${event.studentId}.`;
+            notify(`Card linked to student ${event.studentId}.`);
+          } else if (event.kind === "identified") {
+            selectRfidStudent(event.studentId);
+            message.textContent = `Card scanned for ${event.studentId}. Showing their orders; staff must confirm pickup.`;
+            notify(`Student ${event.studentId} identified. Review their orders.`);
+            refreshOrders(false);
+          } else if (event.kind === "paid") {
+            selectRfidStudent(event.studentId);
+            message.textContent = `Demo RFID payment received for ${event.studentId} · ${event.orderNumber}. Staff can start preparing the order.`;
+            notify(`Demo payment received for ${event.orderNumber}.`);
+            refreshOrders(false);
+            refreshWalletTransactions();
+          } else if (event.kind === "payment_failed" || event.kind === "enrollment_failed") {
+            if (event.studentId) selectRfidStudent(event.studentId);
+            message.textContent = event.message || "RFID action could not be completed.";
+            notify(message.textContent);
+            refreshOrders(false);
+          } else {
+            selectRfidStudent("");
+            message.textContent = "An unlinked RFID card was scanned.";
+            notify(message.textContent);
+          }
+          renderOrders();
+        });
+        lastRfidScanEventId = Math.max(lastRfidScanEventId, result.latestId);
+      } catch (error) {
+        document.getElementById("rfidScanMessage").textContent = error.message;
+      } finally {
+        rfidRefreshInProgress = false;
+      }
+    }
+
+    function selectRfidStudent(studentId) {
+      selectedRfidStudent = studentId;
+      selectedFilter = "all";
+      document.querySelectorAll(".filter").forEach(button => {
+        const active = button.dataset.filter === "all";
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
     }
 
     async function advanceOrder(order, button) {
@@ -752,15 +867,72 @@
       }
     }
 
+    async function refreshStaffRequests() {
+      const list = document.getElementById("staffRequestList");
+      try {
+        const requests = await requestJson("/api/wallet/staff-requests", { cache: "no-store" });
+        if (!Array.isArray(requests)) throw new Error("The server returned invalid staff requests.");
+        list.replaceChildren();
+        if (!requests.length) {
+          list.textContent = "No staff account requests are waiting for approval.";
+          return;
+        }
+        requests.forEach(request => {
+          const entry = document.createElement("article");
+          entry.className = "order-card";
+          const detail = document.createElement("p");
+          detail.className = "order-customer";
+          detail.textContent = `${request.staffId} · requested ${new Date(request.createdAt).toLocaleString()}`;
+          const approve = document.createElement("button");
+          approve.type = "button";
+          approve.className = "status-action ready-action";
+          approve.textContent = "Verify identity and approve";
+          approve.addEventListener("click", () => reviewStaffRequest(request, "approve", approve));
+          const reject = document.createElement("button");
+          reject.type = "button";
+          reject.className = "status-action cancel-action";
+          reject.textContent = "Reject request";
+          reject.addEventListener("click", () => reviewStaffRequest(request, "reject", reject));
+          entry.append(detail, approve, reject);
+          list.appendChild(entry);
+        });
+      } catch (error) {
+        list.textContent = error.message;
+      }
+    }
+
+    async function reviewStaffRequest(request, decision, button) {
+      if (decision === "approve" &&
+          !window.confirm(`Have you verified ${request.staffId}'s identity in person? Approving gives this account staff access.`)) return;
+      button.disabled = true;
+      try {
+        const result = await requestJson(`/api/wallet/staff-requests/${encodeURIComponent(request.id)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision })
+        });
+        notify(`${result.staffId}'s staff request was ${result.decision}.`);
+        await refreshStaffRequests();
+      } catch (error) {
+        notify(error.message);
+        await refreshStaffRequests();
+      }
+    }
+
     function showDashboard() {
       showScreen("dashboardScreen");
       refreshOrders();
       refreshWalletTransactions();
+      refreshStaffRequests();
+      refreshRfidScans();
       window.clearInterval(refreshTimer);
+      window.clearInterval(rfidRefreshTimer);
       refreshTimer = window.setInterval(() => {
         refreshOrders(false);
         refreshWalletTransactions();
+        refreshStaffRequests();
       }, 5000);
+      rfidRefreshTimer = window.setInterval(refreshRfidScans, 1500);
     }
 
     document.getElementById("loginForm").addEventListener("submit", async event => {
@@ -782,12 +954,35 @@
           body: JSON.stringify({ id: staffId, password })
         });
         if (!result.user || result.user.role !== "staff") {
-          await fetch("/api/auth/logout", { method: "POST" });
+          await fetch("/api/auth/logout?role=staff", { method: "POST" });
           throw new Error("Use an authorized staff account to sign in here.");
         }
         showDashboard();
       } catch (error) {
         notify(error instanceof TypeError ? "Could not reach the cafeteria server. Try again." : error.message);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("staffRequestForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const result = await requestJson("/api/auth/staff-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            staffId: form.elements.staffId.value.trim(),
+            password: form.elements.password.value
+          })
+        });
+        form.reset();
+        notify(result.message || "Staff account request submitted for approval.");
+      } catch (error) {
+        notify(error.message);
       } finally {
         submit.disabled = false;
       }
@@ -820,6 +1015,54 @@
     });
 
     document.getElementById("refreshOrders").addEventListener("click", () => refreshOrders());
+    document.getElementById("rfidEnrollForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const studentId = document.getElementById("rfidStudentId").value.trim();
+      try {
+        const result = await requestJson("/api/rfid/enrollment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId })
+        });
+        document.getElementById("rfidScanStatus").hidden = false;
+        document.getElementById("rfidScanMessage").textContent =
+          `Waiting for ${result.studentId} to tap a card. Enrollment expires in 2 minutes.`;
+      } catch (error) {
+        notify(error.message);
+      }
+    });
+    document.getElementById("cancelRfidEnrollment").addEventListener("click", async () => {
+      try {
+        await requestJson("/api/rfid/enrollment", { method: "DELETE" });
+        document.getElementById("rfidScanStatus").hidden = true;
+        notify("RFID card enrollment cancelled.");
+      } catch (error) {
+        notify(error.message);
+      }
+    });
+    document.getElementById("unlinkRfidCard").addEventListener("click", async () => {
+      const studentId = document.getElementById("rfidStudentId").value.trim();
+      if (!studentId) {
+        notify("Enter a student ID before unlinking a card.");
+        document.getElementById("rfidStudentId").focus();
+        return;
+      }
+      try {
+        const result = await requestJson("/api/rfid/cards", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId })
+        });
+        notify(result.unlinked ? `Card unlinked from ${studentId}.` : `No card was linked to ${studentId}.`);
+      } catch (error) {
+        notify(error.message);
+      }
+    });
+    document.getElementById("clearRfidScan").addEventListener("click", () => {
+      selectRfidStudent("");
+      document.getElementById("rfidScanStatus").hidden = true;
+      renderOrders();
+    });
     document.getElementById("studentAccountForm").addEventListener("submit", async event => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -898,7 +1141,7 @@
       const submit = form.querySelector('button[type="submit"]');
       submit.disabled = true;
       try {
-        await requestJson("/api/auth/password", {
+        await requestJson("/api/auth/password?role=staff", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -916,8 +1159,9 @@
     });
     document.getElementById("logout").addEventListener("click", async () => {
       window.clearInterval(refreshTimer);
+      window.clearInterval(rfidRefreshTimer);
       try {
-        await fetch("/api/auth/logout", { method: "POST" });
+        await fetch("/api/auth/logout?role=staff", { method: "POST" });
       } catch (error) {
         console.error("Could not sign out from the cafeteria server:", error);
       }
@@ -925,7 +1169,7 @@
       showScreen("loginScreen");
     });
 
-    fetch("/api/auth/me", { cache: "no-store" })
+    fetch("/api/auth/me?role=staff", { cache: "no-store" })
       .then(response => response.ok ? response.json() : null)
       .then(result => {
         if (result && result.user && result.user.role === "staff") showDashboard();
